@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (c) 2018  Igara Studio S.A.
+// Copyright (c) 2018-2019  Igara Studio S.A.
 //
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
@@ -31,8 +31,10 @@ class SvgFormat : public FileFormat {
   // Data for SVG files
   class SvgOptions : public FormatOptions {
   public:
-    SvgOptions() : pixelScale(1) { }
+    SvgOptions() : pixelScale(1), shapesMethod(true) { }
     int pixelScale;
+    bool rectsMethod;
+    bool shapesMethod;
   };
   
   const char* onGetName() const override {
@@ -160,6 +162,10 @@ bool SvgFormat::onSave(FileOp* fop)
     return true;
   }
 }
+
+void generateShape(Image* &image, Mask* &outputMask, int x, int y) {
+// TO DO seguir!!!!!!!!!!!!
+}
 #endif
 
 // Shows the SVG configuration dialog.
@@ -179,16 +185,24 @@ base::SharedPtr<FormatOptions> SvgFormat::onGetFormatOptions(FileOp* fop)
       
       if (pref.isSet(pref.svg.pixelScale))
         svg_options->pixelScale = pref.svg.pixelScale();
-      
+      if (pref.isSet(pref.svg.rectsMethod))
+        svg_options->rectsMethod = pref.svg.rectsMethod();
+      if (pref.isSet(pref.svg.shapesMethod))
+        svg_options->shapesMethod = pref.svg.shapesMethod();
+
      if (pref.svg.showAlert()) {
         app::gen::SvgOptions win;
         win.pxsc()->setTextf("%d", svg_options->pixelScale);
+        win.rectsMethod()->setSelected(svg_options->rectsMethod);
+        win.shapesMethod()->setSelected(svg_options->shapesMethod);
+
         win.openWindowInForeground();
-      
+
         if (win.closer() == win.ok()) {
           pref.svg.pixelScale((int)win.pxsc()->textInt());
           pref.svg.showAlert(!win.dontShow()->isSelected());
-          
+          pref.svg.rectsMethod(win.rectsMethod()->isSelected());
+          pref.svg.shapesMethod(win.shapesMethod()->isSelected());
           svg_options->pixelScale = pref.svg.pixelScale();
         }
         else {
