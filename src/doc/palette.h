@@ -89,7 +89,8 @@ namespace doc {
 
     int findExactMatch(int r, int g, int b, int a, int mask_index) const;
     int findBestfit(int r, int g, int b, int a, int mask_index) const;
-
+    int findBestfit6bits(int r, int g, int b, int a, int mask_index) const;
+    
     void applyRemap(const Remap& remap);
 
     // TODO add undo/redo support of entry names

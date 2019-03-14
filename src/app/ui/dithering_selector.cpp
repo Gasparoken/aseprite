@@ -67,7 +67,7 @@ public:
 
 private:
   os::Surface* preview() {
-    const doc::Palette* palette = get_current_palette();
+    doc::Palette* palette = get_current_palette();
     ASSERT(palette);
 
     if (m_preview) {

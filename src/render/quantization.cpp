@@ -86,7 +86,7 @@ Image* convert_pixel_format(
   DitheringAlgorithm ditheringAlgorithm,
   const DitheringMatrix& ditheringMatrix,
   const RgbMap* rgbmap,
-  const Palette* palette,
+  Palette* palette,
   bool is_background,
   color_t new_mask_color,
   TaskDelegate* delegate)
@@ -159,24 +159,95 @@ Image* convert_pixel_format(
 #ifdef _DEBUG
           LockImageBits<IndexedTraits>::iterator dst_end = dstBits.end();
 #endif
+          // First pass:
+          if (rgbmap) {
+            for (; src_it != src_end; ++src_it, ++dst_it) {
+              ASSERT(dst_it != dst_end);
+              c = *src_it;
 
-          for (; src_it != src_end; ++src_it, ++dst_it) {
-            ASSERT(dst_it != dst_end);
-            c = *src_it;
+              r = rgba_getr(c);
+              g = rgba_getg(c);
+              b = rgba_getb(c);
+              a = rgba_geta(c);
 
-            r = rgba_getr(c);
-            g = rgba_getg(c);
-            b = rgba_getb(c);
-            a = rgba_geta(c);
+              rgbmap->mapColor(r, g, b, a);
+            }
+            ASSERT(dst_it == dst_end);
 
-            if (a == 0)
-              *dst_it = new_mask_color;
-            else if (rgbmap)
-              *dst_it = rgbmap->mapColor(r, g, b, a);
-            else
-              *dst_it = palette->findBestfit(r, g, b, a, new_mask_color);
+            if (rgbmap->TempPalette6bitSize() < 256) {
+              // Second Pass: if we have less colors than 256, we can search deeper in our palette
+              rgbmap->clear6bitTempPaletteSize();
+              src_it = srcBits.begin(), src_end = srcBits.end();
+              dst_it = dstBits.begin(), dst_end = dstBits.end();
+              for (; src_it != src_end; ++src_it, ++dst_it) {
+                ASSERT(dst_it != dst_end);
+                c = *src_it;
+
+                r = rgba_getr(c);
+                g = rgba_getg(c);
+                b = rgba_getb(c);
+                a = rgba_geta(c);
+
+                rgbmap->mapColor6bitsPressicion(r, g, b, a);
+              }
+              ASSERT(dst_it == dst_end);
+              if (rgbmap->TempPalette6bitSize()<256) {
+                palette->resize(rgbmap->TempPalette6bitSize()+1);
+                for (int i=0; i<rgbmap->TempPalette6bitSize()+1; i++) {
+                  palette->setEntry(i, rgbmap->get6bitTempPaletteElement(i));
+                }
+                rgbmap->setBitsRes(6);
+              }
+              else {
+                rgbmap->setBitsRes(5);
+                rgbmap->clear6bitTempPaletteSize();
+              }
+              
+            }
+            // Final Step: Quantization of the image:
+            src_it = srcBits.begin(), src_end = srcBits.end();
+            dst_it = dstBits.begin(), dst_end = dstBits.end();
+            for (; src_it != src_end; ++src_it, ++dst_it) {
+              ASSERT(dst_it != dst_end);
+              c = *src_it;
+
+              r = rgba_getr(c);
+              g = rgba_getg(c);
+              b = rgba_getb(c);
+              a = rgba_geta(c);
+
+              if (a == 0)
+                *dst_it = new_mask_color;
+              else {
+                if (rgbmap->getBitsRes() == 5)
+                  *dst_it = palette->findBestfit(r, g, b, a, new_mask_color);
+                else if (rgbmap->getBitsRes() == 6)
+                  *dst_it = palette->findBestfit6bits(r, g, b, a, new_mask_color);
+              }
+            }
+            ASSERT(dst_it == dst_end);
           }
-          ASSERT(dst_it == dst_end);
+          else {
+            for (; src_it != src_end; ++src_it, ++dst_it) {
+              ASSERT(dst_it != dst_end);
+              c = *src_it;
+
+              r = rgba_getr(c);
+              g = rgba_getg(c);
+              b = rgba_getb(c);
+              a = rgba_geta(c);
+
+              if (a == 0)
+                *dst_it = new_mask_color;
+              else if (rgbmap) {
+                if (rgbmap->getBitsRes() == 5)
+                  *dst_it = palette->findBestfit(r, g, b, a, new_mask_color);
+                else if (rgbmap->getBitsRes() == 6)
+                  *dst_it = palette->findBestfit6bits(r, g, b, a, new_mask_color);
+              }
+            }
+            ASSERT(dst_it == dst_end);
+          }
           break;
         }
       }

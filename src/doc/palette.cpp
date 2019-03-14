@@ -271,6 +271,54 @@ int Palette::findBestfit(int r, int g, int b, int a, int mask_index) const
   return bestfit;
 }
 
+int Palette::findBestfit6bits(int r, int g, int b, int a, int mask_index) const
+{
+  ASSERT(r >= 0 && r <= 255);
+  ASSERT(g >= 0 && g <= 255);
+  ASSERT(b >= 0 && b <= 255);
+  ASSERT(a >= 0 && a <= 255);
+
+  if (col_diff.empty())
+    initBestfit();
+
+  r >>= 2;
+  g >>= 2;
+  b >>= 2;
+  a >>= 2;
+
+  // Mask index is like alpha = 0, so we can use it as transparent color.
+  if (a == 0 && mask_index >= 0)
+    return mask_index;
+
+  int bestfit = 0;
+  int lowest = std::numeric_limits<int>::max();
+  int size = MIN(256, m_colors.size());
+
+  for (int i=0; i<size; ++i) {
+    color_t rgb = m_colors[i];
+
+    int coldiff = col_diff_g[((rgba_getg(rgb)>>2) - g) & 127];
+    if (coldiff < lowest) {
+      coldiff += col_diff_r[(((rgba_getr(rgb)>>2) - r) & 127)];
+      if (coldiff < lowest) {
+        coldiff += col_diff_b[(((rgba_getb(rgb)>>2) - b) & 127)];
+        if (coldiff < lowest) {
+          coldiff += col_diff_a[(((rgba_geta(rgb)>>2) - a) & 127)];
+          if (coldiff < lowest && i != mask_index) {
+            if (coldiff == 0)
+              return i;
+
+            bestfit = i;
+            lowest = coldiff;
+          }
+        }
+      }
+    }
+  }
+
+  return bestfit;
+}
+
 void Palette::applyRemap(const Remap& remap)
 {
   Palette original(*this);

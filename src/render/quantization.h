@@ -56,7 +56,7 @@ namespace render {
     render::DitheringAlgorithm ditheringAlgorithm,
     const render::DitheringMatrix& ditheringMatrix,
     const doc::RgbMap* rgbmap,
-    const doc::Palette* palette,
+    doc::Palette* palette,
     bool is_background,
     doc::color_t new_mask_color,
     TaskDelegate* delegate = nullptr);
