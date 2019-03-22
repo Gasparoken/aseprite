@@ -1,6 +1,6 @@
 // Aseprite Render Library
-// Copyright (C) 2019 Igara Studio S.A.
-// Copyright (c) 2001-2018 David Capello
+// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (c) 2001-2018  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -48,7 +48,10 @@ Palette* create_palette_from_sprite(
 
   if (!palette)
     palette = new Palette(fromFrame, 256);
-
+  
+  bool octreeEnabled = true;
+  Octree octree(palette->size(), 6, withAlpha);
+  
   // Add a flat image with the current sprite's frame rendered
   ImageRef flat_image(Image::create(IMAGE_RGB,
       sprite->width(), sprite->height()));
@@ -58,7 +61,10 @@ Palette* create_palette_from_sprite(
   render.setNewBlend(newBlend);
   for (frame_t frame=fromFrame; frame<=toFrame; ++frame) {
     render.renderSprite(flat_image.get(), sprite, frame);
-    optimizer.feedWithImage(flat_image.get(), withAlpha);
+    if (octreeEnabled)
+      octree.feedWithImage(flat_image.get(), withAlpha);
+    else
+      optimizer.feedWithImage(flat_image.get(), withAlpha);
 
     if (delegate) {
       if (!delegate->continueTask())
@@ -70,11 +76,15 @@ Palette* create_palette_from_sprite(
   }
 
   // Generate an optimized palette
-  optimizer.calculate(
-    palette,
-    // Transparent color is needed if we have transparent layers
-    (sprite->backgroundLayer() &&
-     sprite->allLayersCount() == 1 ? -1: sprite->transparentColor()));
+  if (octreeEnabled)
+    octree.GeneratePalette(palette);
+  else {
+    optimizer.calculate(
+      palette,
+      // Transparent color is needed if we have transparent layers
+      (sprite->backgroundLayer() &&
+      sprite->allLayersCount() == 1 ? -1: sprite->transparentColor()));
+  }
 
   return palette;
 }
@@ -158,8 +168,8 @@ Image* convert_pixel_format(
           LockImageBits<IndexedTraits>::iterator dst_it = dstBits.begin();
 #ifdef _DEBUG
           LockImageBits<IndexedTraits>::iterator dst_end = dstBits.end();
+          int error_acumulator = 0;
 #endif
-
           for (; src_it != src_end; ++src_it, ++dst_it) {
             ASSERT(dst_it != dst_end);
             c = *src_it;
@@ -175,6 +185,15 @@ Image* convert_pixel_format(
               *dst_it = rgbmap->mapColor(r, g, b, a);
             else
               *dst_it = palette->findBestfit(r, g, b, a, new_mask_color);
+#ifdef _DEBUG
+            int aa = r - rgba_getr(*dst_it);
+            int bb = g - rgba_getg(*dst_it);
+            int cc = b - rgba_getb(*dst_it);
+            int dd = a - rgba_geta(*dst_it);
+            if (error_acumulator > std::numeric_limits<int>::max()>>1)
+              aa++;
+            error_acumulator = aa*aa + bb*bb + cc*cc + dd*dd;
+#endif
           }
           ASSERT(dst_it == dst_end);
           break;
@@ -430,6 +449,211 @@ void PaletteOptimizer::calculate(Palette* palette, int maskIndex)
   }
   else
     palette->resize(MAX(1, usedColors));
+}
+
+//////////////////////////////////////////////////////////////////////
+// Creation of Octree optimizer palette for RGBA images
+// by Igara Studio S.A.
+
+void Octree::feedWithImage(Image* image, bool withAlpha)
+{
+  uint32_t color;
+
+  ASSERT(image);
+  switch (image->pixelFormat()) {
+
+    case IMAGE_RGB:
+      {
+        const LockImageBits<RgbTraits> bits(image);
+        LockImageBits<RgbTraits>::const_iterator it = bits.begin(), end = bits.end();
+
+        for (; it != end; ++it) {
+          color = *it;
+          if (rgba_geta(color) > 0) {
+            if (!withAlpha)
+              color |= rgba(0, 0, 0, 255);
+
+            m_root.AddColor(color);
+          }
+        }
+      }
+      break;
+
+    case IMAGE_GRAYSCALE:
+      {
+        const LockImageBits<RgbTraits> bits(image);
+        LockImageBits<RgbTraits>::const_iterator it = bits.begin(), end = bits.end();
+
+        for (; it != end; ++it) {
+          color = *it;
+
+          if (graya_geta(color) > 0) {
+            if (!withAlpha)
+              color = graya(graya_getv(color), 255);
+
+//            m_histogram.addSamples(rgba(graya_getv(color),
+//                                        graya_getv(color),
+//                                        graya_getv(color),
+//                                        graya_geta(color)), 1);
+          }
+        }
+      }
+      break;
+
+    case IMAGE_INDEXED:
+      ASSERT(false);
+      break;
+
+  }
+}
+
+void Octree::AddColor(color_t c)
+{
+  m_root.AddColor(c);
+}
+
+void Octree::GeneratePalette(Palette* palette)
+{
+  int leaves_count = 0;
+  int last_node_count = 0;
+  m_root.GetLeavesCount(leaves_count, last_node_count, palette->size());
+  if (m_palette.size()>leaves_count) {
+    m_palette.resize(leaves_count);
+    std::vector<SubtotalPixelsCount> temp;
+    m_root.FillSubtotalVector(temp);
+    for (int i=0; i<leaves_count; i++) {
+      m_palette[i] = temp[i].GetColor();
+    }
+    leaves_count = m_palette.size();
+  }
+  while (m_palette.size()<leaves_count) {
+    if (m_palette.size()<last_node_count) {
+      // We have to kill ALL the bottom level
+      // Then recalculate leaves_count and last_node_count
+      m_root.KillLastLevel();
+      leaves_count = 0;
+      last_node_count = 0;
+      m_root.GetLeavesCount(leaves_count, last_node_count, m_palette.size());
+      if (m_palette.size()>=leaves_count) {
+        m_palette.resize(leaves_count);
+        std::vector<SubtotalPixelsCount> temp;
+        m_root.FillSubtotalVector(temp);
+        for (int i=0; i<leaves_count; i++) {
+          m_palette[i] = temp[i].GetColor();
+        }
+        leaves_count = m_palette.size();
+      }
+    }
+    else {
+      // We have to selectively pick the leaves with the most pixel_count
+      // Do this until we reach the desired palette size
+      std::vector<SubtotalPixelsCount> temp;
+      m_root.FillSubtotalVector(temp);
+      for (int i=0; i<m_palette.size(); i++) {
+        int greaterIndex = 0;
+        int greaterCount = 0;
+        for (int j=0; j<temp.size(); j++) {
+          if (greaterCount<temp[j].GetColorCount()) {
+            m_palette[i] = temp[j].GetColor();
+            greaterIndex = j;
+            greaterCount = temp[j].GetColorCount();
+          }
+        }
+        temp.erase(temp.begin() + greaterIndex);
+      }
+      leaves_count = m_palette.size();
+    }
+  }
+  palette->resize(m_palette.size());
+  for (int i=0; i<m_palette.size(); i++) {
+    palette->setEntry(i, m_palette[i]);
+  }
+}
+
+void Node::FillSubtotalVector(std::vector<SubtotalPixelsCount> &temp)
+{
+  if (m_pixel_count>0){
+    if (m_haveChildren) {
+      for (int i=0; i<(m_withAlpha? 16 : 8); i++)
+        m_children[i].FillSubtotalVector(temp);
+    }
+    else {
+      temp.push_back(SubtotalPixelsCount(m_pixel_count, GetColor()));
+    }
+  }
+}
+
+color_t Node::GetColor()
+{
+  int r = m_R_AcumChannel / m_pixel_count;
+  int g = m_G_AcumChannel / m_pixel_count;
+  int b = m_B_AcumChannel / m_pixel_count;
+  int a, alpha = 0;
+  if (m_withAlpha) {
+    a = m_A_AcumChannel / m_pixel_count;
+    alpha = (a<<rgba_a_shift);
+  }
+  else
+    alpha = 0xff000000;
+  return alpha |
+         (b<<rgba_b_shift) |
+         (g<<rgba_g_shift) |
+         (r<<rgba_r_shift);
+}
+
+int Node::GetIndex(color_t c){
+  int mask = 0x80 >> m_nodeLevel;
+  int output =  ((rgba_getr(c) & mask)? 1 : 0)
+              + ((rgba_getg(c) & mask)? 2 : 0)
+              + ((rgba_getb(c) & mask)? 4 : 0)
+              + ((m_withAlpha && (rgba_geta(c) & mask))? 8 : 0);
+  return output;
+}
+
+void Node::AddColor(color_t c) {
+  m_R_AcumChannel += ((c & rgba_r_mask)>>rgba_r_shift);
+  m_G_AcumChannel += ((c & rgba_g_mask)>>rgba_g_shift);
+  m_B_AcumChannel += ((c & rgba_b_mask)>>rgba_b_shift);
+  m_A_AcumChannel += m_withAlpha? ((c & rgba_a_mask)>>rgba_a_shift) : 0;
+  m_pixel_count++;
+  if (m_haveChildren)
+    m_children[GetIndex(c)].AddColor(c);
+}
+
+void Node::GetLeavesCount(int &leaveCountOutput, int &last_node_count, const int &paletteSize)
+{
+  if (paletteSize * 2 > leaveCountOutput) {
+    if (m_pixel_count>0) {
+      if (m_haveChildren) {
+        if (!m_children[0].HaveChildren())
+          last_node_count++;
+        for (int i=0; i<(m_withAlpha? 16 : 8); i++)
+          m_children[i].GetLeavesCount(leaveCountOutput, last_node_count, paletteSize);
+      }
+      else
+        leaveCountOutput++;
+    }
+  }
+  else {
+    leaveCountOutput = paletteSize * 2;
+    last_node_count = paletteSize * 2;
+  }
+  
+}
+
+void Node::KillLastLevel()
+{
+  if (m_haveChildren) {
+    if (m_children[0].HaveChildren()) {
+      for (int i=0; i<(m_withAlpha? 16 : 8); i++)
+        m_children[i].KillLastLevel();
+    }
+    else {
+      // We are in the last node before the leaves.
+      // Colapse the 8 or 16 children leaves into one Leaf
+      m_haveChildren = false;
+    }
+  }
 }
 
 } // namespace render
