@@ -1,5 +1,6 @@
 // Aseprite Document Library
-// Copyright (c) 2001-2017 David Capello
+// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2001-2017  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -233,10 +234,10 @@ int Palette::findBestfit(int r, int g, int b, int a, int mask_index) const
   if (col_diff.empty())
     initBestfit();
 
-  r >>= 3;
-  g >>= 3;
-  b >>= 3;
-  a >>= 3;
+  r >>= 2;
+  g >>= 2;
+  b >>= 2;
+  a >>= 5;
 
   // Mask index is like alpha = 0, so we can use it as transparent color.
   if (a == 0 && mask_index >= 0)
@@ -249,13 +250,13 @@ int Palette::findBestfit(int r, int g, int b, int a, int mask_index) const
   for (int i=0; i<size; ++i) {
     color_t rgb = m_colors[i];
 
-    int coldiff = col_diff_g[((rgba_getg(rgb)>>3) - g) & 127];
+    int coldiff = col_diff_g[((rgba_getg(rgb)>>2) - g) & 127];
     if (coldiff < lowest) {
-      coldiff += col_diff_r[(((rgba_getr(rgb)>>3) - r) & 127)];
+      coldiff += col_diff_r[(((rgba_getr(rgb)>>2) - r) & 127)];
       if (coldiff < lowest) {
-        coldiff += col_diff_b[(((rgba_getb(rgb)>>3) - b) & 127)];
+        coldiff += col_diff_b[(((rgba_getb(rgb)>>2) - b) & 127)];
         if (coldiff < lowest) {
-          coldiff += col_diff_a[(((rgba_geta(rgb)>>3) - a) & 127)];
+          coldiff += col_diff_a[(((rgba_geta(rgb)>>5) - a) & 127)];
           if (coldiff < lowest && i != mask_index) {
             if (coldiff == 0)
               return i;

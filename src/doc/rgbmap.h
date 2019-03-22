@@ -34,8 +34,8 @@ namespace doc {
       ASSERT(g >= 0 && g < 256);
       ASSERT(b >= 0 && b < 256);
       ASSERT(a >= 0 && a < 256);
-      // bits -> bbbbbgggggrrrrraaa
-      int i = (a>>5) | ((b>>3) << 3) | ((g>>3) << 8) | ((r>>3) << 13);
+      // bits -> rrrrrrggggggbbbbbbaaa
+      int i = (a>>5) | ((b>>2) << 3) | ((g>>2) << 9) | ((r>>2) << 15);
       int v = m_map[i];
       return (v & INVALID) ? generateEntry(i, r, g, b, a): v;
     }

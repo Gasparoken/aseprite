@@ -15,9 +15,9 @@
 
 namespace doc {
 
-#define RSIZE   32
-#define GSIZE   32
-#define BSIZE   32
+#define RSIZE   64
+#define GSIZE   64
+#define BSIZE   64
 #define ASIZE   8
 #define MAPSIZE (RSIZE*GSIZE*BSIZE*ASIZE)
 
@@ -49,12 +49,7 @@ void RgbMap::regenerate(const Palette* palette, int mask_index)
 
 int RgbMap::generateEntry(int i, int r, int g, int b, int a) const
 {
-  return m_map[i] =
-    m_palette->findBestfit(
-      scale_5bits_to_8bits(r>>3),
-      scale_5bits_to_8bits(g>>3),
-      scale_5bits_to_8bits(b>>3),
-      scale_3bits_to_8bits(a>>5), m_maskIndex);
+  return m_map[i] = m_palette->findBestfit(r, g, b, a, m_maskIndex);
 }
 
 } // namespace doc
