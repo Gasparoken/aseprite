@@ -1,5 +1,6 @@
 // Aseprite Document Library
-// Copyright (c) 2001-2017 David Capello
+// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2001-2017  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -121,17 +122,69 @@ struct PalEntryWithIndexPredicate {
 
 } // anonymous namespace
 
+// Travelling Salesman Sort:
+void travelling_salesman_sort(const Palette* palette,
+                              std::vector<PalEntryWithIndex> &paletteWithIndex,
+                              const bool ascending)
+{
+  if (palette->size()>2) {
+    int size = palette->size();
+    // To simplyfy the path search, we arbitrarily impose the path start point as:
+    // "The color with the greatest luma" (as you see, this code doesn't search ALL
+    // the possible paths)
+    int greatest_luma = 0;
+    if (ascending)
+      greatest_luma = std::numeric_limits<int>::max();
+    int greatest_index = 0;
+    std::vector<color_t> temp(size, 0);
+    for (int i=0; i<size; i++) {
+      temp[i] = palette->getEntry(i);
+      if (ascending) {
+        if (rgba_luma(palette->getEntry(i)) < greatest_luma) {
+          greatest_luma = rgba_luma(palette->getEntry(i));
+          greatest_index = i;
+        }
+      }
+      else {
+        if (rgba_luma(palette->getEntry(i)) > greatest_luma) {
+          greatest_luma = rgba_luma(palette->getEntry(i));
+          greatest_index = i;
+        }
+      }
+    }
+    paletteWithIndex[0].color = palette->getEntry(greatest_index);
+    paletteWithIndex[0].index = greatest_index;
+    temp[greatest_index] = 0;
+    for (int i=1; i<size; i++) {
+      int minimum_distance_index = 0;
+      int minimum_distance = std::numeric_limits<int>::max();
+      for (int j=0; j<temp.size(); j++) {
+        if (temp[j] != 0 && minimum_distance > rgb_distance(temp[j], paletteWithIndex[i-1].color)) {
+          paletteWithIndex[i].color = temp[j];
+          paletteWithIndex[i].index = j;
+          minimum_distance = rgb_distance(temp[j], paletteWithIndex[i-1].color);
+          minimum_distance_index = j;
+        }
+      }
+      temp[minimum_distance_index] = 0;
+    }
+  }
+}
+
 Remap sort_palette(const Palette* palette,
                    const SortPaletteBy channel,
                    const bool ascending)
 {
   std::vector<PalEntryWithIndex> tmp(palette->size());
-  for (int i=0; i<palette->size(); ++i) {
-    tmp[i].index = i;
-    tmp[i].color = palette->getEntry(i);
+  if (channel == SortPaletteBy::TRAVELLING_SALESMAN)
+    travelling_salesman_sort(palette, tmp, ascending);
+  else {
+    for (int i=0; i<palette->size(); ++i) {
+      tmp[i].index = i;
+      tmp[i].color = palette->getEntry(i);
+    }
+    std::stable_sort(tmp.begin(), tmp.end(), PalEntryWithIndexPredicate(channel, ascending));
   }
-
-  std::stable_sort(tmp.begin(), tmp.end(), PalEntryWithIndexPredicate(channel, ascending));
 
   Remap remap(palette->size());
   for (int i=0; i<palette->size(); ++i)

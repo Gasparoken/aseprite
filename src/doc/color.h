@@ -1,5 +1,6 @@
 // Aseprite Document Library
-// Copyright (c) 2001-2016 David Capello
+// Copyright (c) 2019  Igara Studio
+// Copyright (c) 2001-2016  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -59,6 +60,15 @@ namespace doc {
 
   inline uint8_t rgba_luma(uint32_t c) {
     return rgb_luma(rgba_getr(c), rgba_getg(c), rgba_getb(c));
+  }
+  
+  inline uint32_t rgb_distance(uint32_t c1, uint32_t c2) {
+    // c1: color to be measure the color distance to c2.
+    // c2: color reference.
+    int diff_r = rgba_getr(c1) - rgba_getr(c2);
+    int diff_g = rgba_getg(c1) - rgba_getg(c2);
+    int diff_b = rgba_getb(c1) - rgba_getb(c2);
+    return diff_r*diff_r + diff_g*diff_g*2 + diff_b*diff_b;
   }
 
   //////////////////////////////////////////////////////////////////////

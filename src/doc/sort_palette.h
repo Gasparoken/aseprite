@@ -1,5 +1,6 @@
 // Aseprite Document Library
-// Copyright (c) 2001-2017 David Capello
+// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2001-2017  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -23,6 +24,7 @@ namespace doc {
     VALUE,
     LIGHTNESS,
     LUMA,
+    TRAVELLING_SALESMAN
   };
 
   // Creates a Remap to sort the palette. It doesn't apply the remap.
