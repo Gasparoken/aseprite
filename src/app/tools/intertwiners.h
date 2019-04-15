@@ -59,6 +59,15 @@ public:
 };
 
 class IntertwineAsLines : public Intertwine {
+  static void Line(int x, int y, Stroke* stroke) {
+    gfx::Point newPoint(x, y);
+    if (stroke->empty() ||
+        stroke->lastPoint() != newPoint) {
+      stroke->addPoint(newPoint);
+    }
+  }
+
+  Stroke m_pts;
 public:
   bool snapByAngle() override { return true; }
 
@@ -71,18 +80,32 @@ public:
       doPointshapePoint(stroke[0].x, stroke[0].y, loop);
     }
     else if (stroke.size() >= 2) {
-      for (int c=0; c+1<stroke.size(); ++c) {
-        int x1 = stroke[c].x;
-        int y1 = stroke[c].y;
-        int x2 = stroke[c+1].x;
-        int y2 = stroke[c+1].y;
+      if (stroke.size() == 2 && stroke[0] == stroke[1])
+        return;
+      else {
+        for (int c=0; c+1<stroke.size(); ++c) {
+          algo_line_continuous(
+            stroke[c].x,
+            stroke[c].y,
+            stroke[c+1].x,
+            stroke[c+1].y,
+            (void*)&m_pts,
+            (AlgoPixel)&IntertwineAsLines::Line);
+        }
 
-        doPointshapeLine(x1, y1, x2, y2, loop);
+        for (int c=1; c<m_pts.size(); ++c)
+          doPointshapePoint(m_pts[c].x, m_pts[c].y, loop);
       }
+      m_pts.reset();
     }
 
     // Closed shape (polygon outline)
-    if (loop->getFilled()) {
+    if (loop->getFilled() && !(loop->getController()->isFreehand())) {
+      // Added "&& !(loop->getController()->isFreehand())", to consider
+      // do not over-drawing when the active Controller is Freehand (from
+      // fix #1261). Particularly, the over-draw is appreciated when we
+      // use the Contour Tool combined with Image Brush with alpha
+      // content.
       doPointshapeLine(stroke[0].x, stroke[0].y,
                        stroke[stroke.size()-1].x,
                        stroke[stroke.size()-1].y, loop);
@@ -95,9 +118,6 @@ public:
       joinStroke(loop, stroke);
       return;
     }
-
-    // Contour
-    joinStroke(loop, stroke);
 
     // Fill content
     doc::algorithm::polygon(stroke.size(), (const int*)&stroke[0], loop, (AlgoHLine)doPointshapeHline);
@@ -385,19 +405,25 @@ public:
 
     if (stroke.size() == 0)
       return;
-    else if (m_pts.empty() && stroke.size() == 1) {
-      m_pts = stroke;
-    }
-    else {
-      for (int c=0; c+1<stroke.size(); ++c) {
-        algo_line_continuous(
-          stroke[c].x,
-          stroke[c].y,
-          stroke[c+1].x,
-          stroke[c+1].y,
-          (void*)&m_pts,
-          (AlgoPixel)&IntertwineAsPixelPerfect::pixelPerfectLine);
+    else if (stroke.size() == 1) {
+      if (m_pts.empty())
+        m_pts = stroke;
+      else {
+        if (m_pts[m_pts.size()-1] != stroke[0])
+          m_pts.addPoint(stroke[0]);
       }
+      doPointshapePoint(stroke[0].x, stroke[0].y, loop);
+      return;
+    }
+
+    for (int c=0; c+1<stroke.size(); ++c) {
+      algo_line_continuous(
+        stroke[c].x,
+        stroke[c].y,
+        stroke[c+1].x,
+        stroke[c+1].y,
+        (void*)&m_pts,
+        (AlgoPixel)&IntertwineAsPixelPerfect::pixelPerfectLine);
     }
 
     for (int c=0; c<m_pts.size(); ++c) {
@@ -422,7 +448,7 @@ public:
     }
 
     // Contour
-    joinStroke(loop, stroke);
+    //joinStroke(loop, stroke);
 
     // Fill content
     doc::algorithm::polygon(stroke.size(), (const int*)&stroke[0], loop, (AlgoHLine)doPointshapeHline);

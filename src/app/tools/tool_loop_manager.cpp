@@ -18,6 +18,7 @@
 #include "app/tools/intertwine.h"
 #include "app/tools/point_shape.h"
 #include "app/tools/symmetry.h"
+#include "app/tools/tool.h"
 #include "app/tools/tool_loop.h"
 #include "doc/brush.h"
 #include "doc/image.h"
@@ -196,16 +197,23 @@ void ToolLoopManager::doLoopStep(bool lastStep)
     // freehand algorithm needs this trace policy to redraw only the
     // last dirty area, which can vary in one pixel from the previous
     // tool loop cycle).
-    m_toolLoop->invalidateDstImage(m_dirtyArea);
+    m_toolLoop->invalidateDstImage();
+    m_toolLoop->validateDstImage(gfx::Region(m_toolLoop->getDstImage()->bounds()));
   }
 
   m_toolLoop->validateDstImage(m_dirtyArea);
 
   // Join or fill user points
-  if (!m_toolLoop->getFilled() || (!lastStep && !m_toolLoop->getPreviewFilled()))
+  if (!m_toolLoop->getFilled() || (!lastStep && !m_toolLoop->getPreviewFilled())) {
+//    if (m_toolLoop->getController()->isFreehand() &&  m_toolLoop->getTracePolicy() == TracePolicy::Last)
+//      m_toolLoop->invalidateDstImage();
     m_toolLoop->getIntertwine()->joinStroke(m_toolLoop, main_stroke);
-  else
+  }
+  else {
+    m_toolLoop->invalidateDstImage();
+    m_toolLoop->validateDstImage(gfx::Region(m_toolLoop->getDstImage()->bounds()));
     m_toolLoop->getIntertwine()->fillStroke(m_toolLoop, main_stroke);
+  }
 
   if (m_toolLoop->getTracePolicy() == TracePolicy::Overlap) {
     // Copy destination to source (yes, destination to source). In
