@@ -383,7 +383,7 @@ class IntertwineAsPixelPerfect : public Intertwine {
       stroke->addPoint(newPoint);
     }
   }
-
+  bool retainedTraceyPolicy_Last = false;
   Stroke m_pts;
 
 public:
@@ -393,6 +393,7 @@ public:
 
   void prepareIntertwine() override {
     m_pts.reset();
+    retainedTraceyPolicy_Last = false;
   }
 
   void joinStroke(ToolLoop* loop, const Stroke& stroke) override {
@@ -401,8 +402,10 @@ public:
     // new joinStroke() is like a fresh start.  Without this fix, the
     // first stage on LineFreehand will draw a "star" like pattern
     // with lines from the first point to the last point.
-    if (loop->getTracePolicy() == TracePolicy::Last)
+    if (loop->getTracePolicy() == TracePolicy::Last) {
+      retainedTraceyPolicy_Last = true;
       m_pts.reset();
+    }
 
     if (stroke.size() == 0)
       return;
@@ -435,6 +438,8 @@ public:
         ++c;
       }
 
+      if (c == 0 && (retainedTraceyPolicy_Last))
+        continue;
       doPointshapePoint(m_pts[c].x, m_pts[c].y, loop);
     }
   }

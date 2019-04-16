@@ -71,6 +71,14 @@ void ToolLoopManager::notifyToolLoopModifiersChange()
 
 void ToolLoopManager::pressButton(const Pointer& pointer)
 {
+
+  // A little patch to memorize initial TraceyPolicy in the
+  // current function execution.
+  bool traceyPolicyWasLast = false;
+  if (m_toolLoop->getTracePolicy() == TracePolicy::Last &&
+      m_toolLoop->getController()->isFreehand())
+    traceyPolicyWasLast = true;
+
   m_lastPointer = pointer;
 
   if (isCanceled())
@@ -96,7 +104,17 @@ void ToolLoopManager::pressButton(const Pointer& pointer)
   m_toolLoop->getController()->getStatusBarText(m_toolLoop, m_stroke, statusText);
   m_toolLoop->updateStatusBar(statusText.c_str());
 
-  doLoopStep(false);
+  if (m_toolLoop->getTracePolicy() == TracePolicy::AccumulateUpdateLast &&
+      traceyPolicyWasLast) {
+    // Do nothing. We do not need execute an additional doLoopStep
+    // (which it want to accumulate more points in m_pts in function
+    // joinStroke() from intertwiners.h) when Pixel Perfect mode is
+    // active (i.e. current TraceyPolicy = AccumulateUpdateLast) AND the initial
+    // Tracey Policy was "Last" at the begining of this function
+    // ToolLoopManager::pressButton(..)
+  }
+  else
+    doLoopStep(false);
 }
 
 bool ToolLoopManager::releaseButton(const Pointer& pointer)
