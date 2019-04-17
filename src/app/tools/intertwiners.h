@@ -383,7 +383,12 @@ class IntertwineAsPixelPerfect : public Intertwine {
       stroke->addPoint(newPoint);
     }
   }
-  bool retainedTraceyPolicy_Last = false;
+
+  // It was introduced to know if joinStroke function
+  // was executed inmediatelly after a "Last" trace policy (i.e. after the
+  // user confirms a line draw while he is holding down the SHIFT key), so
+  // we have to ignore printing the first pixel of the line.
+  bool retainedTracePolicyLast = false;
   Stroke m_pts;
 
 public:
@@ -393,7 +398,7 @@ public:
 
   void prepareIntertwine() override {
     m_pts.reset();
-    retainedTraceyPolicy_Last = false;
+    retainedTracePolicyLast = false;
   }
 
   void joinStroke(ToolLoop* loop, const Stroke& stroke) override {
@@ -403,7 +408,7 @@ public:
     // first stage on LineFreehand will draw a "star" like pattern
     // with lines from the first point to the last point.
     if (loop->getTracePolicy() == TracePolicy::Last) {
-      retainedTraceyPolicy_Last = true;
+      retainedTracePolicyLast = true;
       m_pts.reset();
     }
 
@@ -438,7 +443,11 @@ public:
         ++c;
       }
 
-      if (c == 0 && (retainedTraceyPolicy_Last))
+      // We must ignore to print the first point of the line after
+      // a joinStroke pass with a retained "Last" trace policy
+      // (i.e. the user confirms draw a line while he is holding
+      // the SHIFT key))
+      if (c == 0 && retainedTracePolicyLast)
         continue;
       doPointshapePoint(m_pts[c].x, m_pts[c].y, loop);
     }
