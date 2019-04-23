@@ -1,4 +1,5 @@
 // Aseprite
+// Copyright (C) 2019  Igara Studio S.A.
 // Copyright (C) 2001-2017  David Capello
 //
 // This program is distributed under the terms of
@@ -53,6 +54,8 @@ void SetInkTypeCommand::onLoadParams(const Params& params)
     m_type = tools::InkType::LOCK_ALPHA;
   else if (typeStr == "shading")
     m_type = tools::InkType::SHADING;
+  else if (typeStr == "self-composed")
+    m_type = tools::InkType::SELF_COMPOSED;
   else
     m_type = tools::InkType::DEFAULT;
 }
@@ -88,6 +91,9 @@ std::string SetInkTypeCommand::onGetFriendlyName() const
       break;
     case tools::InkType::SHADING:
       ink = Strings::inks_shading();
+      break;
+    case tools::InkType::SELF_COMPOSED:
+      ink = Strings::inks_self_composed();
       break;
   }
   return fmt::format(getBaseFriendlyName(), ink);

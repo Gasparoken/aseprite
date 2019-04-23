@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2018  Igara Studio S.A.
+// Copyright (C) 2018-2019  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -59,6 +59,7 @@ const char* WellKnownInks::PaintBg = "paint_bg";
 const char* WellKnownInks::PaintCopy = "paint_copy";
 const char* WellKnownInks::PaintLockAlpha = "paint_lock_alpha";
 const char* WellKnownInks::Shading = "shading";
+const char* WellKnownInks::SelfComposed = "self_composed";
 const char* WellKnownInks::Gradient = "gradient";
 const char* WellKnownInks::Eraser = "eraser";
 const char* WellKnownInks::ReplaceFgWithBg = "replace_fg_with_bg";
@@ -117,6 +118,7 @@ ToolBox::ToolBox()
   m_inks[WellKnownInks::PaintBg]         = new PaintInk(PaintInk::WithBg);
   m_inks[WellKnownInks::PaintCopy]       = new PaintInk(PaintInk::Copy);
   m_inks[WellKnownInks::PaintLockAlpha]  = new PaintInk(PaintInk::LockAlpha);
+  m_inks[WellKnownInks::SelfComposed]    = new PaintInk(PaintInk::SelfComposed);
   m_inks[WellKnownInks::Gradient]        = new GradientInk();
   m_inks[WellKnownInks::Shading]         = new ShadingInk();
   m_inks[WellKnownInks::Eraser]          = new EraserInk(EraserInk::Eraser);

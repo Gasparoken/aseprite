@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2018  Igara Studio S.A.
+// Copyright (C) 2018-2019  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -52,7 +52,7 @@ private:
 // (or foreground/background colors)
 class PaintInk : public BaseInk {
 public:
-  enum Type { Simple, WithFg, WithBg, Copy, LockAlpha };
+  enum Type { Simple, WithFg, WithBg, Copy, LockAlpha, SelfComposed };
 
 private:
   Type m_type;
@@ -82,8 +82,12 @@ public:
         break;
     }
 
-    if (loop->getBrush()->type() == doc::kImageBrushType)
-      setProc(get_ink_proc<BrushInkProcessing>(loop));
+    if (loop->getBrush()->type() == doc::kImageBrushType) {
+      if (m_type == SelfComposed)
+        setProc(get_ink_proc<BrushInkSelfComposedProcessing>(loop));
+      else
+        setProc(get_ink_proc<BrushInkProcessing>(loop));
+    }
     else {
       switch (m_type) {
         case Simple: {
@@ -118,6 +122,9 @@ public:
           break;
         case LockAlpha:
           setProc(get_ink_proc<LockAlphaInkProcessing>(loop));
+          break;
+        case SelfComposed:
+          setProc(get_ink_proc<SelfComposedInkProcessing>(loop));
           break;
         default:
           setProc(get_ink_proc<TransparentInkProcessing>(loop));

@@ -420,6 +420,7 @@
       <key command="SetInkType"><param name="type" value="copy-color" /></key>
       <key command="SetInkType"><param name="type" value="lock-alpha" /></key>
       <key command="SetInkType"><param name="type" value="shading" /></key>
+      <key command="SetInkType"><param name="type" value="self-composed" /></key>
       <key command="SetSameInk" />
       <key command="SetColorSelector">
         <param name="type" value="tint-shade-tone" />
@@ -1051,6 +1052,9 @@
       </item>
       <item command="SetInkType" text="@inks.shading">
         <param name="type" value="shading" />
+      </item>
+      <item command="SetInkType" text="@inks.self_composed">
+        <param name="type" value="self-composed" />
       </item>
       <separator />
       <item command="SetSameInk" text="@.same_in_all_tools" />

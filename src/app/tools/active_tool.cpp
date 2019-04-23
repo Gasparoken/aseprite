@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2018  Igara Studio S.A.
+// Copyright (C) 2018-2019  Igara Studio S.A.
 // Copyright (C) 2016  David Capello
 //
 // This program is distributed under the terms of
@@ -105,6 +105,9 @@ Ink* ActiveToolManager::activeInk() const
         break;
       case tools::InkType::SHADING:
         id = tools::WellKnownInks::Shading;
+        break;
+      case tools::InkType::SELF_COMPOSED:
+        id = tools::WellKnownInks::SelfComposed;
         break;
     }
 

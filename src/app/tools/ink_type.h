@@ -1,4 +1,5 @@
 // Aseprite
+// Copyright (C) 2019  Igara Studio S.A.
 // Copyright (C) 2001-2015  David Capello
 //
 // This program is distributed under the terms of
@@ -20,11 +21,13 @@ namespace tools {
     COPY_COLOR = 2,
     LOCK_ALPHA = 3,
     SHADING = 4,
+    SELF_COMPOSED = 5
   };
 
   inline bool inkHasOpacity(InkType inkType) {
     return (inkType == InkType::ALPHA_COMPOSITING ||
-            inkType == InkType::LOCK_ALPHA);
+            inkType == InkType::LOCK_ALPHA ||
+            inkType == InkType::SELF_COMPOSED);
   }
 
   std::string ink_type_to_string(InkType inkType);
