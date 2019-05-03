@@ -52,92 +52,6 @@ namespace {
   static const char* kSpecifiedFilename = "**filename**";
 #endif
 
-  struct Fit {
-    int width;
-    int height;
-    int columns;
-    int rows;
-    int freearea;
-    Fit() : width(0), height(0), columns(0), rows(0), freearea(0) {
-    }
-    Fit(int width, int height, int columns, int rows, int freearea) :
-      width(width), height(height), columns(columns), rows(rows), freearea(freearea) {
-    }
-  };
-
-  // Calculate best size for the given sprite
-  // TODO this function was programmed in ten minutes, please optimize it
-  Fit best_fit(Sprite* sprite, int nframes, int borderPadding, int shapePadding, int innerPadding) {
-    int framew = sprite->width()+2*innerPadding;
-    int frameh = sprite->height()+2*innerPadding;
-    Fit result(framew*nframes, frameh, nframes, 1, std::numeric_limits<int>::max());
-    int w, h;
-
-    for (w=2; w < framew; w*=2)
-      ;
-    for (h=2; h < frameh; h*=2)
-      ;
-
-    int z = 0;
-    bool fully_contained = false;
-    while (!fully_contained) {  // TODO at this moment we're not
-                                // getting the best fit for less
-                                // freearea, just the first one.
-      gfx::Rect rgnSize(w-2*borderPadding, h-2*borderPadding);
-      gfx::Region rgn(rgnSize);
-      int contained_frames = 0;
-
-      for (int v=0; v+frameh <= rgnSize.h && !fully_contained; v+=frameh+shapePadding) {
-        for (int u=0; u+framew <= rgnSize.w; u+=framew+shapePadding) {
-          gfx::Rect framerc = gfx::Rect(u, v, framew, frameh);
-          rgn.createSubtraction(rgn, gfx::Region(framerc));
-
-          ++contained_frames;
-          if (nframes == contained_frames) {
-            fully_contained = true;
-            break;
-          }
-        }
-      }
-
-      if (fully_contained) {
-        // TODO convert this to a template function gfx::area()
-        int freearea = 0;
-        for (const gfx::Rect& rgnRect : rgn)
-          freearea += rgnRect.w * rgnRect.h;
-
-        Fit fit(w, h, (w / framew), (h / frameh), freearea);
-        if (fit.freearea < result.freearea)
-          result = fit;
-      }
-
-      if ((++z) & 1) w *= 2;
-      else h *= 2;
-    }
-
-    return result;
-  }
-
-  Fit calculate_sheet_size(Sprite* sprite, int nframes,
-                           int columns, int rows,
-                           int borderPadding,
-                           int shapePadding,
-                           int innerPadding) {
-    if (columns == 0) {
-      rows = MID(1, rows, nframes);
-      columns = ((nframes/rows) + ((nframes%rows) > 0 ? 1: 0));
-    }
-    else {
-      columns = MID(1, columns, nframes);
-      rows = ((nframes/columns) + ((nframes%columns) > 0 ? 1: 0));
-    }
-
-    return Fit(
-      2*borderPadding + (sprite->width()+2*innerPadding)*columns + (columns-1)*shapePadding,
-      2*borderPadding + (sprite->height()+2*innerPadding)*rows + (rows-1)*shapePadding,
-      columns, rows, 0);
-  }
-
 #ifdef ENABLE_UI
   bool ask_overwrite(bool askFilename, std::string filename,
                      bool askDataname, std::string dataname) {
@@ -319,6 +233,29 @@ public:
     onSheetTypeChange();
     onFileNamesChange();
     updateExportButton();
+
+    // Adding parameters to the DocExporter member.
+    SelectedFrames selFrames;
+    FrameTag* frameTag = calculate_selected_frames(m_site,
+                              frameTagValue(),
+                              selFrames);
+    // If the user choose to render selected layers only, we can
+    // temporaly make them visible and hide the other ones.
+    RestoreVisibleLayers layersVisibility;
+    calculate_visible_layers(m_site, layerValue(), layersVisibility);
+
+    SelectedLayers selLayers;
+    if (layerValue() != kSelectedLayers) {
+      // TODO add a getLayerByName
+      for (Layer* layer : m_site.sprite()->allLayers()) {
+        if (layer->name() == layerValue()) {
+          selLayers.insert(layer);
+          break;
+        }
+      }
+    }
+    m_exporter.addDocument((Doc*)m_sprite->document(), frameTag, &selLayers, &selFrames);
+    updateSizeFields();
   }
 
   bool ok() const {
@@ -480,8 +417,10 @@ private:
     fitHeight()->setVisible(matrixState);
     bestFitFiller()->setVisible(matrixState);
     bestFit()->setVisible(matrixState);
+    //bestFit()->setSelected(matrixState);
 
     resize();
+    //updateSizeFields();
   }
 
   void onFileNamesChange() {
@@ -492,17 +431,49 @@ private:
 
   void onColumnsChange() {
     bestFit()->setSelected(false);
-    updateSizeFields();
+    updateSizeFieldsFromRowsColumnsChange(true);
   }
 
   void onRowsChange() {
     bestFit()->setSelected(false);
-    updateSizeFields();
+    updateSizeFieldsFromRowsColumnsChange(false);
   }
 
   void onSizeChange() {
-    columns()->setTextf("%d", fitWidthValue() / m_sprite->width());
-    rows()->setTextf("%d", fitHeightValue() / m_sprite->height());
+    int r = rowsValue();
+    int c = columnsValue();
+    int sheetWidth = fitWidthValue();
+    int sheetHeight = fitHeightValue();
+    SelectedFrames selFrames;
+    calculate_selected_frames(m_site,
+                              frameTagValue(),
+                              selFrames);
+    frame_t nframes = selFrames.size();
+    m_exporter.rowsColumnsValidator(
+      m_site.sprite()->size(),
+      sheetWidth,
+      sheetHeight,
+      nframes,
+      r,
+      c);
+    m_exporter.calculateSheetSizeGivenRowsColumns(
+      m_site.sprite()->size(),
+      sheetWidth,
+      sheetHeight,
+      nframes,
+      r,
+      c,
+      true);
+//    m_exporter.calculateRowsColumns(m_site.sprite()->size(),
+//                                    sheetWidth,
+//                                    sheetHeight,
+//                                    nframes,
+//                                    r,
+//                                    c);
+    m_exporter.setTextureWidth(sheetWidth);
+    m_exporter.setTextureHeight(sheetHeight);
+    rows()->setTextf("%d", r);
+    columns()->setTextf("%d", c);
     bestFit()->setSelected(false);
   }
 
@@ -599,34 +570,114 @@ private:
       openGenerated()->isSelected());
   }
 
-  void updateSizeFields() {
+  void updateSizeFieldsFromRowsColumnsChange(bool columnChanged) {
+    // We must change ONLY the size fields, rows or column will be user data,
+    // So we must to validate rows or columns input in order to run processes
+    // correctly:
+    
+    // Filter bad values of rows and columns
     SelectedFrames selFrames;
     calculate_selected_frames(m_site,
                               frameTagValue(),
                               selFrames);
-
     frame_t nframes = selFrames.size();
-
-    Fit fit;
-    if (bestFit()->isSelected()) {
-      fit = best_fit(m_sprite, nframes,
-                     borderPaddingValue(), shapePaddingValue(),
-                     innerPaddingValue() + extrudePadding());
+    int r;
+    int c;
+    if (columnChanged) {
+      if (columnsValue() == 0)
+        c = 1;
+      else
+        c = columnsValue();
+      r = nframes / c + (nframes % c? 1 : 0);
     }
     else {
-      fit = calculate_sheet_size(
-        m_sprite, nframes,
-        columnsValue(),
-        rowsValue(),
-        borderPaddingValue(),
-        shapePaddingValue(),
-        innerPaddingValue() + extrudePadding());
+      if (rowsValue() == 0)
+        r = 1;
+      else
+        r = rowsValue();
+      c = nframes / r + (nframes % r? 1 : 0);
     }
+    // We start with the sizes displayed on screen:
+    int sheetWidth = fitWidthValue();
+    int sheetHeight = fitHeightValue();
+    // And we check is these sizes are suficiently big, if not, we fix that:
+    m_exporter.calculateSheetSizeGivenRowsColumns(m_site.sprite()->size(),
+                                                  sheetWidth,
+                                                  sheetHeight,
+                                                  nframes,
+                                                  r,
+                                                  c,
+                                                  true);
+    rows()->setTextf("%d", r);
+    columns()->setTextf("%d", c);
+    fitWidth()->getEntryWidget()->setTextf("%d", sheetWidth);
+    fitHeight()->getEntryWidget()->setTextf("%d", sheetHeight);
+  }
 
-    columns()->setTextf("%d", fit.columns);
-    rows()->setTextf("%d", fit.rows);
-    fitWidth()->getEntryWidget()->setTextf("%d", fit.width);
-    fitHeight()->getEntryWidget()->setTextf("%d", fit.height);
+  void updateSizeFields() {
+    // We must update columns, rows and texture size.
+    // This change, can be by
+    SelectedFrames selFrames;
+    calculate_selected_frames(m_site,
+                              frameTagValue(),
+                              selFrames);
+    frame_t nframes = selFrames.size();
+    int r = rowsValue();
+    int c = columnsValue();
+    int sheetWidth = fitWidthValue();
+    int sheetHeight = fitHeightValue();
+    
+    m_exporter.rowsColumnsValidator(
+      m_site.sprite()->size(),
+      sheetWidth,
+      sheetHeight,
+      nframes,
+      r,
+      c);
+    m_exporter.setInnerPadding(innerPaddingValue());
+    m_exporter.setExtrude(extrudeValue());
+    m_exporter.setShapePadding(shapePaddingValue());
+    m_exporter.setBorderPadding(borderPaddingValue());
+    m_exporter.setSpriteSheetType(spriteSheetTypeValue());
+
+    if (bestFit()->isSelected()) {
+      SpriteSheetType tmp = m_exporter.spriteSheetType();
+      m_exporter.setSpriteSheetType(SpriteSheetType::Packed);
+      m_exporter.setTextureWidth(0);
+      m_exporter.setTextureHeight(0);
+      m_exporter.calculateSheetSize();
+      m_exporter.setSpriteSheetType(tmp);
+      
+      sheetWidth = m_exporter.textureWidth();
+      sheetHeight = m_exporter.textureHeight();
+      m_exporter.calculateRowsColumns(
+        m_sprite->size(),
+        sheetWidth,
+        sheetHeight,
+        nframes,
+        r,
+        c);
+
+      m_exporter.setTextureWidth(sheetWidth);
+      m_exporter.setTextureHeight(sheetHeight);
+
+      columns()->setTextf("%d", c);
+      rows()->setTextf("%d", r);
+      fitWidth()->getEntryWidget()->setTextf("%d", m_exporter.textureWidth());
+      fitHeight()->getEntryWidget()->setTextf("%d", m_exporter.textureHeight());
+    }
+    else {
+      sheetWidth = fitWidthValue();
+      sheetHeight = fitHeightValue();
+      m_exporter.calculateSheetSizeGivenRowsColumns(m_sprite->size(), sheetWidth, sheetHeight, nframes, r, c, true);
+      m_exporter.setTextureWidth(sheetWidth);
+      m_exporter.setTextureHeight(sheetHeight);
+
+      columns()->setTextf("%d", c);
+      rows()->setTextf("%d", r);
+      fitWidth()->getEntryWidget()->setTextf("%d", m_exporter.textureWidth());
+      fitHeight()->getEntryWidget()->setTextf("%d", m_exporter.textureHeight());
+    }
   }
 
   void updateDataFields() {
@@ -641,6 +692,7 @@ private:
   std::string m_dataFilename;
   bool m_filenameAskOverwrite;
   bool m_dataFilenameAskOverwrite;
+  DocExporter m_exporter;
 };
 
 #endif // ENABLE_UI
@@ -670,6 +722,7 @@ void ExportSpriteSheetCommand::onExecute(Context* context)
   Doc* document = site.document();
   Sprite* sprite = site.sprite();
   auto& params = this->params();
+  //DocExporter exporter;
 
 #ifdef ENABLE_UI
   // TODO if we use this line when !ENABLE_UI,
@@ -716,12 +769,70 @@ void ExportSpriteSheetCommand::onExecute(Context* context)
     if (!window.ok())
       return;
 
+    // Before to save docPref, we will take care saving coherent data to the next load params process:
+    std::string layerName = window.layerValue();
+    std::string tagName = window.frameTagValue();
+    SelectedFrames selFrames;
+    FrameTag* frameTag = calculate_selected_frames(site, tagName, selFrames);
+    frame_t nframes = selFrames.size();
+
+    RestoreVisibleLayers layersVisibility;
+
+    calculate_visible_layers(site, layerName, layersVisibility);
+
+    SelectedLayers selLayers;
+    if (layerName != kSelectedLayers) {
+      // TODO add a getLayerByName
+      for (Layer* layer : sprite->allLayers()) {
+        if (layer->name() == layerName) {
+          selLayers.insert(layer);
+          break;
+        }
+      }
+    }
+    DocExporter exporter;
+    exporter.addDocument(document, frameTag,
+                         (!selLayers.empty() ? &selLayers: nullptr),
+                         (!selFrames.empty() ? &selFrames: nullptr));
+    exporter.setSpriteSheetType(window.spriteSheetTypeValue());
+    exporter.setTextureWidth(window.fitWidthValue());
+    exporter.setTextureHeight(window.fitHeightValue());
+    exporter.setBorderPadding(window.borderPaddingValue());
+    exporter.setShapePadding(window.shapePaddingValue());
+    exporter.setInnerPadding(window.innerPaddingValue());
+    exporter.setExtrude(window.extrudeValue());
+    exporter.setBorderPadding(window.borderPaddingValue());
+    exporter.setTrimCels(window.trimValue());
+    exporter.setTrimByGrid(window.trimByGridValue());
+
+    // Check columns (c) and rows (r) values, acording sprite sheet type.
+    // We must fix r and c values if these have not sense:
+    int r = window.rowsValue();
+    int c = window.columnsValue();
+    int sheetWidth = exporter.textureWidth();
+    int sheetHeight = exporter.textureHeight();
+    exporter.rowsColumnsValidator(sprite->size(),
+                                  sheetWidth,
+                                  sheetHeight,
+                                  nframes,
+                                  r,
+                                  c);
+    // We recalculate the size fields, with a coherent number of r and c.
+    exporter.calculateSheetSizeGivenRowsColumns(
+                                  sprite->size(),
+                                  sheetWidth,
+                                  sheetHeight,
+                                  nframes,
+                                  r,
+                                  c,
+                                  true);
+    // Now we can save safely, valid docPref data to file config:
     docPref.spriteSheet.defined(true);
     docPref.spriteSheet.type            (params.type            (window.spriteSheetTypeValue()));
-    docPref.spriteSheet.columns         (params.columns         (window.columnsValue()));
-    docPref.spriteSheet.rows            (params.rows            (window.rowsValue()));
-    docPref.spriteSheet.width           (params.width           (window.fitWidthValue()));
-    docPref.spriteSheet.height          (params.height          (window.fitHeightValue()));
+    docPref.spriteSheet.columns         (params.columns         (c));//window.columnsValue()));
+    docPref.spriteSheet.rows            (params.rows            (r));//window.rowsValue()));
+    docPref.spriteSheet.width           (params.width           (sheetWidth));//window.fitWidthValue()));
+    docPref.spriteSheet.height          (params.height          (sheetHeight));//window.fitHeightValue()));
     docPref.spriteSheet.bestFit         (params.bestFit         (window.bestFitValue()));
     docPref.spriteSheet.textureFilename (params.textureFilename (window.filenameValue()));
     docPref.spriteSheet.dataFilename    (params.dataFilename    (window.dataFilenameValue()));
@@ -805,64 +916,70 @@ void ExportSpriteSheetCommand::onExecute(Context* context)
       }
     }
   }
-
-  if (bestFit) {
-    Fit fit = best_fit(sprite, nframes, borderPadding, shapePadding,
-                       innerPadding + extrudePadding);
-    columns = fit.columns;
-    rows = fit.rows;
-    width = fit.width;
-    height = fit.height;
-  }
-
-  int sheet_w = 0;
-  int sheet_h = 0;
-
-  switch (type) {
-    case app::SpriteSheetType::Horizontal:
-      columns = sprite->totalFrames();
-      rows = 1;
-      break;
-    case app::SpriteSheetType::Vertical:
-      columns = 1;
-      rows = nframes;
-      break;
-    case app::SpriteSheetType::Rows:
-    case app::SpriteSheetType::Columns:
-      if (width > 0) sheet_w = width;
-      if (height > 0) sheet_h = height;
-      break;
-  }
-
-  Fit fit = calculate_sheet_size(
-    sprite, nframes,
-    columns, rows,
-    borderPadding, shapePadding, innerPadding + extrudePadding);
-  if (sheet_w == 0) sheet_w = fit.width;
-  if (sheet_h == 0) sheet_h = fit.height;
-
   DocExporter exporter;
+  exporter.addDocument(document, frameTag,
+                       (!selLayers.empty() ? &selLayers: nullptr),
+                       (!selFrames.empty() ? &selFrames: nullptr));
+  exporter.setTextureWidth(width);
+  exporter.setTextureHeight(height);
+  exporter.setInnerPadding(innerPadding);
+  exporter.setExtrude(extrudePadding);
+  exporter.setShapePadding(shapePadding);
+  exporter.setBorderPadding(borderPadding);
+  exporter.setSpriteSheetType(type);
+  exporter.setTrimCels(trimCels);
+  exporter.setTrimByGrid(trimByGrid);
+  if (listLayers) exporter.setListLayers(true);
+  if (listTags) exporter.setListFrameTags(true);
+  if (listSlices) exporter.setListSlices(true);
+
+  int r = rows;
+  int c = columns;
+  int sheetWidth = width;
+  int sheetHeight = height;
+  if (bestFit) {
+    exporter.setTextureWidth(0);
+    exporter.setTextureHeight(0);
+    SpriteSheetType tmp = exporter.spriteSheetType();
+    exporter.setSpriteSheetType(SpriteSheetType::Packed);
+    exporter.calculateSheetSize();
+    sheetWidth = exporter.textureWidth();
+    sheetHeight = exporter.textureHeight();
+    exporter.setSpriteSheetType(tmp);
+    exporter.calculateRowsColumns(sprite->size(),
+                                  sheetWidth,
+                                  sheetHeight,
+                                  nframes,
+                                  r,
+                                  c);
+    exporter.setTextureWidth(sheetWidth);
+    exporter.setTextureHeight(sheetHeight);
+  }
+  else {
+    exporter.rowsColumnsValidator(
+      sprite->size(),
+      sheetWidth,
+      sheetHeight,
+      nframes,
+      r,
+      c);
+  }
+  exporter.calculateSheetSizeGivenRowsColumns(sprite->size(),
+                                              sheetWidth,
+                                              sheetHeight,
+                                              nframes,
+                                              r,
+                                              c,
+                                              false);
+  exporter.setTextureWidth(sheetWidth);
+  exporter.setTextureHeight(sheetHeight);
+
   if (!filename.empty())
     exporter.setTextureFilename(filename);
   if (!dataFilename.empty()) {
     exporter.setDataFilename(dataFilename);
     exporter.setDataFormat(dataFormat);
   }
-  exporter.setTextureWidth(sheet_w);
-  exporter.setTextureHeight(sheet_h);
-  exporter.setSpriteSheetType(type);
-  exporter.setBorderPadding(borderPadding);
-  exporter.setShapePadding(shapePadding);
-  exporter.setInnerPadding(innerPadding);
-  exporter.setTrimCels(trimCels);
-  exporter.setTrimByGrid(trimByGrid);
-  exporter.setExtrude(extrude);
-  if (listLayers) exporter.setListLayers(true);
-  if (listTags) exporter.setListFrameTags(true);
-  if (listSlices) exporter.setListSlices(true);
-  exporter.addDocument(document, frameTag,
-                       (!selLayers.empty() ? &selLayers: nullptr),
-                       (!selFrames.empty() ? &selFrames: nullptr));
 
   std::unique_ptr<Doc> newDocument(exporter.exportSheet(context));
   if (!newDocument)

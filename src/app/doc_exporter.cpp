@@ -623,6 +623,149 @@ void DocExporter::captureSamples(Samples& samples)
   }
 }
 
+void DocExporter::calculateRowsColumns(
+    const gfx::Size spriteSize,
+    int& sheetWidth,
+    int& sheetHeight,
+    const int nframes,
+    int& rows,
+    int& columns)
+  {
+  rows = 1;
+  columns = 1;
+  // Checking the minimum sheet size:
+  int minimunWidth = 2*m_borderPadding + spriteSize.w + 2*(m_innerPadding + m_extrude);
+  int minimunHeight = 2*m_borderPadding + spriteSize.h + 2*(m_innerPadding + m_extrude);
+  if (sheetWidth < minimunWidth)
+    sheetWidth = minimunWidth;
+  if (sheetHeight < minimunHeight)
+    sheetHeight = minimunHeight;
+
+  switch (m_sheetType) {
+    case SpriteSheetType::Rows: {
+      int remainWidth = sheetWidth - 2*m_borderPadding;
+      for (; columns < nframes; columns++) {
+        remainWidth =  remainWidth - (spriteSize.w + 2*m_innerPadding + 2*m_extrude);
+        if (remainWidth <= 0)
+          if (remainWidth < 0) {
+            columns--;
+          break;
+        }
+        remainWidth -= m_shapePadding;
+      }
+      rows = nframes / columns + (nframes % columns? 1 : 0);
+      minimunHeight = 2*m_borderPadding + rows * (spriteSize.h + 2*(m_innerPadding + m_extrude)) + m_shapePadding * (rows - 1);
+      if (sheetHeight < minimunHeight)
+        sheetHeight = minimunHeight;
+      break;
+    }
+    case SpriteSheetType::Columns: {
+      int remainHeight = sheetHeight - 2*m_borderPadding;
+      for (; rows < nframes; rows++) {
+        remainHeight =  remainHeight - (spriteSize.h + 2*m_innerPadding + 2*m_extrude);
+        if (remainHeight <= 0)
+          if (remainHeight < 0) {
+            rows--;
+          break;
+        }
+        remainHeight -= m_shapePadding;
+      }
+      columns = nframes / rows + (nframes % rows? 1 : 0);
+      minimunWidth = 2*m_borderPadding + columns * (spriteSize.w + 2*(m_innerPadding + m_extrude)) + m_shapePadding * (columns - 1);
+      if (sheetWidth < minimunWidth)
+        sheetWidth = minimunWidth;
+      break;
+    }
+    case SpriteSheetType::Horizontal: {
+      rows = 1;
+      columns = nframes;
+      int minimunWidth = 2*m_borderPadding + columns * (spriteSize.w + 2*(m_innerPadding + m_extrude)) + m_shapePadding * (columns - 1);
+      if (sheetWidth < minimunWidth)
+        sheetWidth = minimunWidth;
+      break;
+    }
+    case SpriteSheetType::Vertical: {
+      rows = nframes;
+      columns = 1;
+      int minimunHeight = 2*m_borderPadding + rows * (spriteSize.h + 2*(m_innerPadding + m_extrude)) + m_shapePadding * (rows - 1);
+      if (sheetHeight < minimunHeight)
+        sheetHeight = minimunHeight;
+      break;
+    }
+  }
+}
+
+void DocExporter::rowsColumnsValidator(
+    const gfx::Size spriteSize,
+    int& sheetWidth,
+    int& sheetHeight,
+    const int nframes,
+    int& rows,
+    int& columns) {
+
+  switch (m_sheetType) {
+    case SpriteSheetType::Horizontal: {
+      rows = 1;
+      columns = nframes;
+      break;
+    }
+    case SpriteSheetType::Vertical: {
+      rows = nframes;
+      columns = 1;
+      break;
+    }
+    case SpriteSheetType::Rows: {
+      columns = MID(1, columns, nframes);
+      rows = nframes / columns + (nframes % columns? 1 : 0);
+      break;
+    }
+    case SpriteSheetType::Columns: {
+      rows = MID(1, rows, nframes);
+      columns = nframes / rows + (nframes % rows? 1 : 0);
+      break;
+    }
+  }
+//  calculateSheetSizeGivenRowsColumns(
+//    spriteSize,
+//    sheetWidth,
+//    sheetHeight,
+//    nframes,
+//    rows,
+//    columns,
+//    takeMinSheetSize);
+}
+
+void DocExporter::calculateSheetSizeGivenRowsColumns(
+    const gfx::Size spriteSize,
+    int& sheetWidth,
+    int& sheetHeight,
+    const int nframes,
+    const int rows,
+    const int columns,
+    const bool takeMinSheetSize)
+  {
+  // Checking the minimun sheet width and height:
+  int minimunSheetWidth  = 2*m_borderPadding +
+                           columns * (spriteSize.w +
+                           2*(m_innerPadding + m_extrude)) +
+                           m_shapePadding * (columns - 1);
+
+  int minimunSheetHeight = 2*m_borderPadding +
+                           rows * (spriteSize.h +
+                           2*(m_innerPadding + m_extrude)) +
+                           m_shapePadding * (rows - 1);
+  if (m_sheetType == SpriteSheetType::Horizontal || m_sheetType == SpriteSheetType::Horizontal || takeMinSheetSize) {
+    sheetWidth = minimunSheetWidth;
+    sheetHeight = minimunSheetHeight;
+  }
+  else {
+    if (sheetWidth < minimunSheetWidth)
+      sheetWidth = minimunSheetWidth;
+    if (sheetHeight < minimunSheetHeight)
+      sheetHeight = minimunSheetHeight;
+  }
+}
+
 void DocExporter::layoutSamples(Samples& samples)
 {
   switch (m_sheetType) {

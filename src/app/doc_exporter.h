@@ -87,6 +87,26 @@ namespace app {
 
     Doc* exportSheet(Context* ctx);
     gfx::Size calculateSheetSize();
+    void calculateRowsColumns(const gfx::Size spriteSize,
+                              int& sheetWidth,
+                              int& sheetHeight,
+                              const int nframes,
+                              int& rows,
+                              int& columns);
+    void rowsColumnsValidator(const gfx::Size spriteSize,
+                              int& sheetWidth,
+                              int& sheetHeight,
+                              const int nframes,
+                              int& rows,
+                              int& columns);
+    void calculateSheetSizeGivenRowsColumns(
+                              const gfx::Size spriteSize,
+                              int& sheetWidth,
+                              int& sheetHeight,
+                              const int nframes,
+                              const int rows,
+                              const int columns,
+                              const bool takeMinSheetSize);
 
   private:
     class Sample;
