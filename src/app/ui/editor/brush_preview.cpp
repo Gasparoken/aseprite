@@ -398,6 +398,10 @@ void BrushPreview::generateBoundaries()
   m_brushBoundaries.reset(
     new MaskBoundaries(mask ? mask: brushImage));
 
+  ASSERT(brushImage);
+  if (brushImage->bounds().w % 2 == 0) m_brushBoundaries->offset(1, 0);
+  if (brushImage->bounds().h % 2 == 0) m_brushBoundaries->offset(0, 1);
+
   if (deleteMask)
     delete mask;
 }
