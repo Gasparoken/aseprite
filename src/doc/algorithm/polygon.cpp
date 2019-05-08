@@ -39,7 +39,7 @@ void algorithm::polygon(int vertices, const int* points, void* data, AlgoHLine p
   int j;
   int index;
   int y;
-  int miny, maxy;
+  int miny, maxy, minx, maxx;
   int x1, y1;
   int x2, y2;
   int ind1, ind2;
@@ -47,9 +47,28 @@ void algorithm::polygon(int vertices, const int* points, void* data, AlgoHLine p
 
   std::vector<int> polyInts(n);
   std::vector<Point> p(n);
-  for (i = 0; (i < n); i++) {
+
+  // Horizontal lines patch: The next 6 lines are only
+  // to take care of the pure Horizontal line case:
+  bool isHorizontalLine = true;
+  p[0].x = points[0];
+  p[0].y = points[1];
+  minx = p[0].x;
+  maxx = p[0].x;
+  int initialY = p[0].y;
+
+  for (i = 1; (i < n); i++) {
     p[i].x = points[i*2];
     p[i].y = points[i*2+1];
+
+    // Horizontal lines patch: The next 6 lines are only
+    // to take care of the pure Horizontal line case:
+    if (p[0].y != p[i].y)
+      isHorizontalLine = false;
+    if (minx > p[i].x)
+      minx = p[i].x;
+    if (maxx < p[i].x)
+      maxx = p[i].x;
   }
 
   miny = p[0].y;
@@ -139,6 +158,10 @@ void algorithm::polygon(int vertices, const int* points, void* data, AlgoHLine p
       proc(polyInts[i], y, polyInts[i + 1], data);
     }
   }
+
+  // Horizontal lines patch:
+  if (isHorizontalLine)
+    proc(minx, initialY, maxx, data);
 }
 
 } // namespace doc
