@@ -141,10 +141,22 @@ public:
   }
 
   void fillStroke(ToolLoop* loop, const Stroke& stroke) override {
+#if 0
+    // Before this, we executed an invalidateDstImage() on tool_loop_manager, it erase our image.
+    // So we need to draw the entire contour shape (polygon algorithm should be enough).
+    // However, to improve the behavior in the particular case when we use
+    // Shift+click with contour tool active AND brush size 1 px, we need just a line which first
+    // pixel will NOT draw (to avoid the re-draw of line's fist pixel)
+    // TODO useful only in the case when brush size = 1px
+    
+    // Just the case stroke[0] == stroke[1] we prefer polygon algorithm which force printing of all area (1 px)
+    // If NOT, joinStroke assumes that it have to draw a stroke with 2 pixels, but when stroke is passed to pts
+    // pts has 1 point, then the first one have to be discarded, so no pixel is drawn.
     if (stroke.size() < 3) {
       joinStroke(loop, stroke);
       return;
     }
+#endif
     // Fill content
     doc::algorithm::polygon(stroke.size(), (const int*)&stroke[0], loop, (AlgoHLine)doPointshapeHline);
   }
