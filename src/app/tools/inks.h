@@ -81,8 +81,12 @@ public:
         break;
     }
 
-    if (loop->getBrush()->type() == doc::kImageBrushType)
-      setProc(get_ink_proc<BrushInkProcessing>(loop));
+    if (loop->getBrush()->type() == doc::kImageBrushType) {
+      if (m_type == LockAlpha)
+        setProc(get_ink_proc<BrushInkLockAlphaProcessing>(loop));
+      else
+        setProc(get_ink_proc<BrushInkProcessing>(loop));
+    }
     else {
       switch (m_type) {
         case Simple: {
