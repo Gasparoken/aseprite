@@ -182,12 +182,18 @@ void PasteTextCommand::onExecute(Context* ctx)
     if (image) {
       Sprite* sprite = editor->sprite();
       if (image->pixelFormat() != sprite->pixelFormat()) {
-        RgbMap* rgbmap = sprite->rgbMap(editor->frame());
+        RgbMap* rgbmap;
+        const OctreeMap* octreeMap;
+        if (sprite->pixelFormat() == PixelFormat::IMAGE_INDEXED) {
+          rgbmap = sprite->rgbMap(editor->frame());
+          octreeMap = sprite->octreeMap(sprite->palette(editor->frame()), sprite->transparentColor());
+        }
+
         image.reset(
           render::convert_pixel_format(
             image.get(), NULL, sprite->pixelFormat(),
             render::Dithering(),
-            rgbmap, sprite->palette(editor->frame()),
+            rgbmap, octreeMap, sprite->palette(editor->frame()),
             false, 0));
       }
 

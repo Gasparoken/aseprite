@@ -1,4 +1,5 @@
 // Aseprite
+// Copyright (C)      2020  Igara Studio S.A.
 // Copyright (C) 2001-2015  David Capello
 //
 // This program is distributed under the terms of
@@ -13,6 +14,7 @@
 #include "filters/filter_indexed_data.h"
 #include "filters/filter_manager.h"
 #include "doc/image.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/rgbmap.h"
 
@@ -89,6 +91,7 @@ void InvertColorFilter::applyToIndexed(FilterManager* filterMgr)
   uint8_t* dst_address = (uint8_t*)filterMgr->getDestinationAddress();
   const Palette* pal = filterMgr->getIndexedData()->getPalette();
   const RgbMap* rgbmap = filterMgr->getIndexedData()->getRgbMap();
+  const OctreeMap* octreeMap = filterMgr->getIndexedData()->getOctreeMap();
   int w = filterMgr->getWidth();
   Target target = filterMgr->getTarget();
   int x, c, r, g, b, a;
@@ -116,7 +119,12 @@ void InvertColorFilter::applyToIndexed(FilterManager* filterMgr)
       if (target & TARGET_BLUE_CHANNEL ) b ^= 0xff;
       if (target & TARGET_ALPHA_CHANNEL) a ^= 0xff;
 
-      c = rgbmap->mapColor(r, g, b, a);
+      if (octreeMap)
+        c = octreeMap->mapColor(r, g, b);
+      else {
+        ASSERT(rgbmap);
+        c = rgbmap->mapColor(r, g, b, a);
+      }
     }
 
     *(dst_address++) = c;

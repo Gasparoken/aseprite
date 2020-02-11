@@ -451,10 +451,11 @@ int Image_resize(lua_State* L)
     Site site = ctx->activeSite();
     const doc::Palette* pal = site.palette();
     const doc::RgbMap* rgbmap = site.rgbMap();
+    const doc::OctreeMap* octreeMap = site.octreeMap();
 
     std::unique_ptr<doc::Image> newImg(
       resize_image(img, scale, method,
-                   pal, rgbmap));
+                   pal, rgbmap, octreeMap));
     // Delete old image, and we put the same ID of the old image into
     // the new image so this userdata references the resized image.
     delete img;

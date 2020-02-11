@@ -1177,6 +1177,7 @@ void DocExporter::renderTexture(Context* ctx,
         sample.sprite(),
         textureImage->pixelFormat(),
         render::Dithering(),
+        MapAlgorithm::DEFAULT,     // TODO add mapping algorithm preference
         nullptr)                // TODO add a delegate to show progress
         .execute(ctx);
     }

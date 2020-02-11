@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2018-2019  Igara Studio S.A.
+// Copyright (C) 2018-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -25,6 +25,7 @@
 #include "doc/color_mode.h"
 #include "doc/frame.h"
 #include "doc/layer_list.h"
+#include "doc/map_algorithm.h"
 #include "doc/sprite.h"
 #include "filters/tiled_mode.h"
 #include "gfx/rect.h"

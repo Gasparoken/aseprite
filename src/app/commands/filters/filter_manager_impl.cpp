@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -436,6 +436,12 @@ const Palette* FilterManagerImpl::getPalette() const
 const RgbMap* FilterManagerImpl::getRgbMap() const
 {
   return m_site.sprite()->rgbMap(m_site.frame());
+}
+
+const OctreeMap* FilterManagerImpl::getOctreeMap() const
+{
+  return m_site.sprite()->octreeMap(m_site.sprite()->palette(m_site.frame()),
+                                    m_site.sprite()->transparentColor());
 }
 
 Palette* FilterManagerImpl::getNewPalette()

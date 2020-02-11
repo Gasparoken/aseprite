@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2019-2020  Igara Studio S.A.
 //
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
@@ -29,7 +29,9 @@ doc::Image* resize_image(
   const gfx::SizeF& scale,
   const doc::algorithm::ResizeMethod method,
   const Palette* pal,
-  const RgbMap* rgbmap)
+  const RgbMap* rgbmap,
+  const OctreeMap* octreeMap
+  )
 {
   doc::ImageSpec spec = image->spec();
   spec.setWidth(std::max(1, int(scale.w*image->width())));
@@ -44,6 +46,7 @@ doc::Image* resize_image(
     method,
     pal,
     rgbmap,
+    octreeMap,
     newImage->maskColor());
 
   return newImage.release();
@@ -88,7 +91,10 @@ void resize_cel_image(
         image, newImage.get(),
         method,
         sprite->palette(cel->frame()),
-        sprite->rgbMap(cel->frame()),
+        (newImage->pixelFormat() == PixelFormat::IMAGE_INDEXED)?
+          sprite->rgbMap(cel->frame()): nullptr,
+        (newImage->pixelFormat() == PixelFormat::IMAGE_INDEXED)?
+          sprite->octreeMap(sprite->palette(cel->frame()), sprite->transparentColor()): nullptr,
         (cel->layer()->isBackground() ? -1: sprite->transparentColor()));
 
       tx(new cmd::ReplaceImage(sprite, cel->imageRef(), newImage));

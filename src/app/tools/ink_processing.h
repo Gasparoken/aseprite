@@ -189,6 +189,7 @@ public:
   LockAlphaInkProcessing(ToolLoop* loop)
     : m_palette(get_current_palette())
     , m_rgbmap(loop->getRgbMap())
+    , m_octreeMap(loop->getOctreeMap())
     , m_color(m_palette->getEntry(loop->getPrimaryColor()))
     , m_opacity(loop->getOpacity())
     , m_maskIndex(loop->getLayer()->isBackground() ? -1: loop->sprite()->transparentColor()) {
@@ -203,16 +204,27 @@ public:
 
     color_t result = rgba_blender_normal(c, m_color, m_opacity);
     // TODO should we use m_rgbmap->mapColor instead?
-    *m_dstAddress = m_palette->findBestfit(
-      rgba_getr(result),
-      rgba_getg(result),
-      rgba_getb(result),
-      rgba_geta(c), m_maskIndex);
+    if (m_octreeMap)
+      *m_dstAddress = m_octreeMap->mapColor(rgba_getr(result),
+                                            rgba_getg(result),
+                                            rgba_getb(result));
+    else if (m_rgbmap)
+      *m_dstAddress = m_rgbmap->mapColor(rgba_getr(result),
+                                         rgba_getg(result),
+                                         rgba_getb(result),
+                                         rgba_geta(c));
+    else
+      *m_dstAddress = m_palette->findBestfit(rgba_getr(result),
+                                             rgba_getg(result),
+                                             rgba_getb(result),
+                                             rgba_geta(c),
+                                             m_maskIndex);
   }
 
 private:
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   const color_t m_color;
   const int m_opacity;
   const int m_maskIndex;
@@ -255,6 +267,7 @@ public:
   TransparentInkProcessing(ToolLoop* loop) :
     m_palette(get_current_palette()),
     m_rgbmap(loop->getRgbMap()),
+    m_octreeMap(loop->getOctreeMap()),
     m_opacity(loop->getOpacity()),
     m_color(m_palette->getEntry(loop->getPrimaryColor())),
     m_maskIndex(loop->getLayer()->isBackground() ? -1: loop->sprite()->transparentColor()) {
@@ -268,15 +281,23 @@ public:
       c = m_palette->getEntry(c);
 
     c = rgba_blender_normal(c, m_color, m_opacity);
-    *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
-                                       rgba_getg(c),
-                                       rgba_getb(c),
-                                       rgba_geta(c));
+    if (m_octreeMap)
+      *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                            rgba_getg(c),
+                                            rgba_getb(c));
+    else {
+      ASSERT(m_rgbmap);
+      *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                         rgba_getg(c),
+                                         rgba_getb(c),
+                                         rgba_geta(c));
+    }
   }
 
 private:
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   const int m_opacity;
   const color_t m_color;
   const int m_maskIndex;
@@ -319,6 +340,7 @@ public:
   MergeInkProcessing(ToolLoop* loop) :
     m_palette(get_current_palette()),
     m_rgbmap(loop->getRgbMap()),
+    m_octreeMap(loop->getOctreeMap()),
     m_opacity(loop->getOpacity()),
     m_maskIndex(loop->getLayer()->isBackground() ? -1: loop->sprite()->transparentColor()),
     m_color(int(loop->getPrimaryColor()) == m_maskIndex ?
@@ -334,15 +356,24 @@ public:
       c = m_palette->getEntry(c);
 
     c = rgba_blender_merge(c, m_color, m_opacity);
-    *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
-                                       rgba_getg(c),
-                                       rgba_getb(c),
-                                       rgba_geta(c));
+
+    if (m_octreeMap)
+      *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                            rgba_getg(c),
+                                            rgba_getb(c));
+    else {
+      ASSERT(m_rgbmap);
+      *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                         rgba_getg(c),
+                                         rgba_getb(c),
+                                         rgba_geta(c));
+    }
   }
 
 private:
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   const int m_opacity;
   const int m_maskIndex;
   const color_t m_color;
@@ -467,6 +498,7 @@ public:
   BlurInkProcessing(ToolLoop* loop) :
     m_palette(get_current_palette()),
     m_rgbmap(loop->getRgbMap()),
+    m_octreeMap(loop->getOctreeMap()),
     m_opacity(loop->getOpacity()),
     m_tiledMode(loop->getTiledMode()),
     m_srcImage(loop->getSrcImage()),
@@ -489,8 +521,17 @@ public:
                            doc::rgba(m_area.r, m_area.g, m_area.b, m_area.a),
                            m_opacity);
 
-      *m_dstAddress = m_rgbmap->mapColor(
-        rgba_getr(c), rgba_getg(c), rgba_getb(c), rgba_geta(c));
+      if (m_octreeMap)
+        *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                              rgba_getg(c),
+                                              rgba_getb(c));
+      else {
+        ASSERT(m_rgbmap);
+        *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                           rgba_getg(c),
+                                           rgba_getb(c),
+                                           rgba_geta(c));
+      }
     }
     else {
       *m_dstAddress = *m_srcAddress;
@@ -527,6 +568,7 @@ private:
 
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   int m_opacity;
   TiledMode m_tiledMode;
   const Image* m_srcImage;
@@ -587,6 +629,7 @@ public:
   ReplaceInkProcessing(ToolLoop* loop) {
     m_palette = get_current_palette();
     m_rgbmap = loop->getRgbMap();
+    m_octreeMap = loop->getOctreeMap();
     m_color1 = loop->getPrimaryColor();
     m_color2 = loop->getSecondaryColor();
     m_opacity = loop->getOpacity();
@@ -602,8 +645,17 @@ public:
         color_t c = rgba_blender_normal(
           m_palette->getEntry(*m_srcAddress), m_color2, m_opacity);
 
-        *m_dstAddress = m_rgbmap->mapColor(
-          rgba_getr(c), rgba_getg(c), rgba_getb(c), rgba_geta(c));
+        if (m_octreeMap)
+          *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                                rgba_getg(c),
+                                                rgba_getb(c));
+        else {
+          ASSERT(m_rgbmap);
+          *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                             rgba_getg(c),
+                                             rgba_getb(c),
+                                             rgba_geta(c));
+        }
       }
     }
   }
@@ -611,6 +663,7 @@ public:
 private:
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   color_t m_color1;
   color_t m_color2;
   int m_opacity;
@@ -626,6 +679,7 @@ public:
   JumbleInkProcessing(ToolLoop* loop) :
     m_palette(get_current_palette()),
     m_rgbmap(loop->getRgbMap()),
+    m_octreeMap(loop->getOctreeMap()),
     m_speed(loop->getSpeed() / 4),
     m_opacity(loop->getOpacity()),
     m_tiledMode(loop->getTiledMode()),
@@ -656,6 +710,7 @@ private:
 
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   Point m_speed;
   int m_opacity;
   TiledMode m_tiledMode;
@@ -689,11 +744,19 @@ void JumbleInkProcessing<IndexedTraits>::processPixel(int x, int y)
                                  m_palette->getEntry(*m_srcAddress): 0,
                                  tc, m_opacity);
 
-  if (rgba_geta(c) >= 128)
-    *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
-                                       rgba_getg(c),
-                                       rgba_getb(c),
-                                       rgba_geta(c));
+  if (rgba_geta(c) >= 128) {
+    if (m_octreeMap)
+      *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                            rgba_getg(c),
+                                            rgba_getb(c));
+    else {
+      ASSERT(m_rgbmap);
+      *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                         rgba_getg(c),
+                                         rgba_getb(c),
+                                         rgba_geta(c));
+    }
+  }
   else
     *m_dstAddress = 0;
 }
@@ -728,6 +791,7 @@ public:
   ShadingInkProcessing(ToolLoop* loop) :
     m_palette(get_current_palette()),
     m_rgbmap(loop->getRgbMap()),
+    m_octreeMap(loop->getOctreeMap()),
     m_remap(loop->getShadingRemap()),
     m_left(loop->getMouseButton() == ToolLoop::Left) {
   }
@@ -777,6 +841,7 @@ public:
 private:
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   const Remap* m_remap;
   bool m_left;
 };
@@ -947,6 +1012,7 @@ public:
     , m_opacity(loop->getOpacity())
     , m_palette(get_current_palette())
     , m_rgbmap(loop->getRgbMap())
+    , m_octreeMap(loop->getOctreeMap())
     , m_maskIndex(loop->getLayer()->isBackground() ? -1: loop->sprite()->transparentColor())
     , m_matrix(loop->getDitheringMatrix())
   {
@@ -969,6 +1035,7 @@ private:
   const int m_opacity;
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   const int m_maskIndex;
   const render::DitheringMatrix m_matrix;
 };
@@ -1039,10 +1106,17 @@ void GradientInkProcessing<IndexedTraits>::processPixel(int x, int y)
     c0 = m_palette->getEntry(c0);
   c = rgba_blender_normal(c0, c, m_opacity);
 
-  *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
-                                     rgba_getg(c),
-                                     rgba_getb(c),
-                                     rgba_geta(c));
+  if (m_octreeMap)
+    *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                          rgba_getg(c),
+                                          rgba_getb(c));
+  else {
+    ASSERT(m_rgbmap);
+    *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                       rgba_getg(c),
+                                       rgba_getb(c),
+                                       rgba_geta(c));
+  }
 
   ++m_tmpAddress;
 }
@@ -1082,20 +1156,29 @@ public:
   XorInkProcessing(ToolLoop* loop) :
     m_palette(get_current_palette()),
     m_rgbmap(loop->getRgbMap()),
+    m_octreeMap(loop->getOctreeMap()),
     m_color(m_palette->getEntry(loop->getPrimaryColor())) {
   }
 
   void processPixel(int x, int y) {
     color_t c = rgba_blender_neg_bw(m_palette->getEntry(*m_srcAddress), m_color, 255);
-    *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
-                                       rgba_getg(c),
-                                       rgba_getb(c),
-                                       rgba_geta(c));
+    if (m_octreeMap)
+      *m_dstAddress = m_octreeMap->mapColor(rgba_getr(c),
+                                            rgba_getg(c),
+                                            rgba_getb(c));
+    else {
+      ASSERT(m_rgbmap);
+      *m_dstAddress = m_rgbmap->mapColor(rgba_getr(c),
+                                         rgba_getg(c),
+                                         rgba_getb(c),
+                                         rgba_geta(c));
+    }
   }
 
 private:
   const Palette* m_palette;
   const RgbMap* m_rgbmap;
+  const OctreeMap* m_octreeMap;
   color_t m_color;
 };
 

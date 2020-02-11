@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -21,6 +21,7 @@ namespace doc {
   class Layer;
   class Palette;
   class RgbMap;
+  class OctreeMap;
   class Sprite;
 } // namespace doc
 
@@ -98,6 +99,7 @@ namespace app {
     doc::Image* image(int* x = nullptr, int* y = nullptr, int* opacity = nullptr) const;
     doc::Palette* palette() const;
     doc::RgbMap* rgbMap() const;
+    doc::OctreeMap* octreeMap() const;
 
     gfx::Rect gridBounds() const;
 

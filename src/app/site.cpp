@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -30,6 +30,13 @@ Palette* Site::palette()
 RgbMap* Site::rgbMap() const
 {
   return (m_sprite ? m_sprite->rgbMap(m_frame): nullptr);
+}
+
+OctreeMap* Site::octreeMap() const
+{
+  return (m_sprite ?
+            m_sprite->octreeMap(m_sprite->palette(m_frame), m_sprite->transparentColor()):
+            nullptr);
 }
 
 const Cel* Site::cel() const

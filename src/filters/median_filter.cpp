@@ -1,4 +1,5 @@
 // Aseprite
+// Copyright (C)      2020  Igara Studio S.A.
 // Copyright (C) 2001-2017  David Capello
 //
 // This program is distributed under the terms of
@@ -12,6 +13,7 @@
 
 #include "base/memory.h"
 #include "doc/image_impl.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/rgbmap.h"
 #include "filters/filter_indexed_data.h"
@@ -225,6 +227,7 @@ void MedianFilter::applyToIndexed(FilterManager* filterMgr)
   uint8_t* dst_address = (uint8_t*)filterMgr->getDestinationAddress();
   const Palette* pal = filterMgr->getIndexedData()->getPalette();
   const RgbMap* rgbmap = filterMgr->getIndexedData()->getRgbMap();
+  const OctreeMap* octreeMap = filterMgr->getIndexedData()->getOctreeMap();
   Target target = filterMgr->getTarget();
   int color, r, g, b, a;
   GetPixelsDelegateIndexed delegate(pal, m_channel, target);
@@ -279,7 +282,12 @@ void MedianFilter::applyToIndexed(FilterManager* filterMgr)
       else
         a = rgba_geta(color);
 
-      *(dst_address++) = rgbmap->mapColor(r, g, b, a);
+      if (octreeMap)
+        *(dst_address++) = octreeMap->mapColor(r, g, b);
+      else {
+        ASSERT(rgbmap);
+        *(dst_address++) = rgbmap->mapColor(r, g, b, a);
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 // Aseprite Render Library
-// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2019-2020  Igara Studio S.A.
 // Copyright (c) 2001-2018  David Capello
 //
 // This file is released under the terms of the MIT license.
@@ -44,9 +44,13 @@ Palette* create_palette_from_sprite(
   const bool withAlpha,
   Palette* palette,
   TaskDelegate* delegate,
-  const bool newBlend)
+  const bool newBlend,
+  MapAlgorithm mappingAlgorithm)
 {
+
+  OctreeMap* map = new OctreeMap();
   PaletteOptimizer optimizer;
+  color_t maskColor = (sprite->backgroundLayer() && sprite->allLayersCount() == 1) ? 0x00FFFFFF: sprite->transparentColor();
 
   if (!palette)
     palette = new Palette(fromFrame, 256);
@@ -60,8 +64,10 @@ Palette* create_palette_from_sprite(
   render.setNewBlend(newBlend);
   for (frame_t frame=fromFrame; frame<=toFrame; ++frame) {
     render.renderSprite(flat_image.get(), sprite, frame);
-    optimizer.feedWithImage(flat_image.get(), withAlpha);
-
+    if (mappingAlgorithm == MapAlgorithm::OCTREE)
+      map->feedWithImage(flat_image.get(), maskColor);
+    else
+      optimizer.feedWithImage(flat_image.get(), withAlpha);
     if (delegate) {
       if (!delegate->continueTask())
         return nullptr;
@@ -71,13 +77,33 @@ Palette* create_palette_from_sprite(
     }
   }
 
-  // Generate an optimized palette
-  optimizer.calculate(
-    palette,
-    // Transparent color is needed if we have transparent layers
-    (sprite->backgroundLayer() &&
-     sprite->allLayersCount() == 1 ? -1: sprite->transparentColor()));
+  if (mappingAlgorithm == MapAlgorithm::OCTREE) {
+    if (!(map->makePalette(palette, palette->size()))) {
+      // We can use an 8bits deep octree map, instead of
+      // 7bits of the first attemp in previous code line
+      map = new OctreeMap();
+      for (frame_t frame=fromFrame; frame<=toFrame; ++frame) {
+        render.renderSprite(flat_image.get(), sprite, frame);
+        map->feedWithImage(flat_image.get(), maskColor , 8);
+        if (delegate) {
+          if (!delegate->continueTask())
+            return nullptr;
 
+          delegate->notifyTaskProgress(
+            double(frame-fromFrame+1) / double(toFrame-fromFrame+1));
+        }
+      }
+      map->makePalette(palette, palette->size(), 8);
+    }
+  }
+  else {
+    // Generate an optimized palette
+    optimizer.calculate(
+      palette,
+      // Transparent color is needed if we have transparent layers
+      (sprite->backgroundLayer() &&
+       sprite->allLayersCount() == 1 ? -1: sprite->transparentColor()));
+  }
   return palette;
 }
 
@@ -87,6 +113,7 @@ Image* convert_pixel_format(
   PixelFormat pixelFormat,
   const Dithering& dithering,
   const RgbMap* rgbmap,
+  const OctreeMap* octreeMap,
   const Palette* palette,
   bool is_background,
   color_t new_mask_color,
@@ -115,7 +142,7 @@ Image* convert_pixel_format(
     if (dither)
       dither_rgb_image_to_indexed(
         *dither, dithering,
-        image, new_image, rgbmap, palette, delegate);
+        image, new_image, rgbmap, octreeMap, palette, delegate);
     return new_image;
   }
 
@@ -164,7 +191,6 @@ Image* convert_pixel_format(
 #ifdef _DEBUG
           LockImageBits<IndexedTraits>::iterator dst_end = dstBits.end();
 #endif
-
           for (; src_it != src_end; ++src_it, ++dst_it) {
             ASSERT(dst_it != dst_end);
             c = *src_it;
@@ -176,6 +202,8 @@ Image* convert_pixel_format(
 
             if (a == 0)
               *dst_it = new_mask_color;
+            else if (octreeMap)
+              *dst_it = octreeMap->mapColor(r, g, b);
             else if (rgbmap)
               *dst_it = rgbmap->mapColor(r, g, b, a);
             else

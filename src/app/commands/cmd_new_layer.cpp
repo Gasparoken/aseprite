@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -311,7 +311,10 @@ void NewLayerCommand::onExecute(Context* context)
               nullptr,
               sprite->pixelFormat(),
               render::Dithering(),
-              sprite->rgbMap(dstFrame),
+              (sprite->pixelFormat() == PixelFormat::IMAGE_INDEXED)?
+                sprite->rgbMap(dstFrame): nullptr,
+              (sprite->pixelFormat() == PixelFormat::IMAGE_INDEXED)?
+                sprite->octreeMap(pasteSpr->palette(fr), sprite->transparentColor()): nullptr,
               pasteSpr->palette(fr),
               (pasteSpr->backgroundLayer() ? true: false),
               sprite->transparentColor()));

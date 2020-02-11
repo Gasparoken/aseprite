@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2016  David Capello
 //
 // This program is distributed under the terms of
@@ -17,6 +17,7 @@
 #include "filters/filter_manager.h"
 #include "filters/neighboring_pixels.h"
 #include "doc/image_impl.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/rgbmap.h"
 
@@ -260,6 +261,7 @@ void ConvolutionMatrixFilter::applyToIndexed(FilterManager* filterMgr)
   uint8_t* dst_address = (uint8_t*)filterMgr->getDestinationAddress();
   const Palette* pal = filterMgr->getIndexedData()->getPalette();
   const RgbMap* rgbmap = filterMgr->getIndexedData()->getRgbMap();
+  const OctreeMap* octreeMap = filterMgr->getIndexedData()->getOctreeMap();
   Target target = filterMgr->getTarget();
   uint8_t color;
   GetPixelsDelegateIndexed delegate(pal);
@@ -325,7 +327,21 @@ void ConvolutionMatrixFilter::applyToIndexed(FilterManager* filterMgr)
       else
         delegate.a = rgba_geta(color);
 
-      *(dst_address++) = rgbmap->mapColor(delegate.r, delegate.g, delegate.b, delegate.a);
+      if (octreeMap)
+        *(dst_address++) = octreeMap->mapColor(delegate.r,
+                                               delegate.g,
+                                               delegate.b);
+      else if (rgbmap)
+        *(dst_address++) = rgbmap->mapColor(delegate.r,
+                                            delegate.g,
+                                            delegate.b,
+                                            delegate.a);
+      else
+        *(dst_address++) = pal->findBestfit(delegate.r,
+                                            delegate.g,
+                                            delegate.b,
+                                            delegate.a,
+                                            0);//maskIndex);
     }
   }
 }

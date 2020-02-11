@@ -384,13 +384,17 @@ void paste(Context* ctx, const bool interactive)
         src_image = clipboard_image;
       }
       else {
-        RgbMap* dst_rgbmap = dstSpr->rgbMap(site.frame());
-
+        RgbMap* dst_rgbmap;
+        OctreeMap* dst_octreeMap;
+        if (dstSpr->pixelFormat() == PixelFormat::IMAGE_INDEXED) {
+          dst_rgbmap = dstSpr->rgbMap(site.frame());
+          dst_octreeMap = dstSpr->octreeMap(dst_palette, dstSpr->transparentColor());
+        }
         src_image.reset(
           render::convert_pixel_format(
             clipboard_image.get(), NULL, dstSpr->pixelFormat(),
             render::Dithering(),
-            dst_rgbmap, clipboard_palette.get(),
+            dst_rgbmap, dst_octreeMap, clipboard_palette.get(),
             false,
             0));
       }

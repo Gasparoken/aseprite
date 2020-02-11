@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2018-2019  Igara Studio S.A.
+// Copyright (C) 2018-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -770,7 +770,8 @@ private:
         render::convert_pixel_format
         (oldImage, NULL, IMAGE_RGB,
          render::Dithering(),
-         nullptr,
+         nullptr, // Ignored because we need to convert to IMAGE_RGB
+         nullptr, // Ignored because we need to convert to IMAGE_RGB
          m_sprite->palette(cel->frame()),
          m_opaque,
          m_bgIndex));
@@ -782,7 +783,8 @@ private:
       render::convert_pixel_format
       (m_currentImage.get(), NULL, IMAGE_RGB,
        render::Dithering(),
-       nullptr,
+       nullptr, // Ignored because we need to convert to IMAGE_RGB
+       nullptr, // Ignored because we need to convert to IMAGE_RGB
        m_sprite->palette(m_frameNum),
        m_opaque,
        m_bgIndex));
@@ -791,7 +793,8 @@ private:
       render::convert_pixel_format
       (m_previousImage.get(), NULL, IMAGE_RGB,
        render::Dithering(),
-       nullptr,
+       nullptr, // Ignored because we need to convert to IMAGE_RGB
+       nullptr, // Ignored because we need to convert to IMAGE_RGB
        m_sprite->palette(MAX(0, m_frameNum-1)),
        m_opaque,
        m_bgIndex));
@@ -1170,17 +1173,26 @@ private:
                   const bool fixDuration) {
     std::unique_ptr<Palette> framePaletteRef;
     std::unique_ptr<RgbMap> rgbmapRef;
+    std::unique_ptr<OctreeMap> octreeMapRef;
     Palette* framePalette = m_sprite->palette(frame);
     RgbMap* rgbmap = m_sprite->rgbMap(frame);
+    OctreeMap* octreeMap = m_sprite->octreeMap(m_sprite->palette(frame), m_sprite->transparentColor());
 
     // Create optimized palette for RGB/Grayscale images
     if (m_quantizeColormaps) {
       framePaletteRef.reset(createOptimizedPalette(frameBounds));
       framePalette = framePaletteRef.get();
 
-      rgbmapRef.reset(new RgbMap);
-      rgbmap = rgbmapRef.get();
-      rgbmap->regenerate(framePalette, m_transparentIndex);
+      if (octreeMap) {
+        octreeMapRef.reset(new OctreeMap);
+        octreeMap = octreeMapRef.get();
+        octreeMap->regenerate(framePalette, m_transparentIndex);
+      }
+      else {
+        rgbmapRef.reset(new RgbMap);
+        rgbmap = rgbmapRef.get();
+        rgbmap->regenerate(framePalette, m_transparentIndex);
+      }
     }
 
     // We will store the frameBounds pixels in frameImage, with the
@@ -1232,11 +1244,25 @@ private:
               rgba_getb(color),
               255,
               m_transparentIndex);
-            if (i < 0)
-              i = rgbmap->mapColor(rgba_getr(color),
-                                   rgba_getg(color),
-                                   rgba_getb(color),
-                                   255);
+            if (i < 0) {
+              if (rgba_geta(color) == 0)
+                i = m_transparentIndex;
+              else if (octreeMap)
+                i = octreeMap->mapColor(rgba_getr(color),
+                                        rgba_getg(color),
+                                        rgba_getb(color));
+              else if (rgbmap)
+                i = rgbmap->mapColor(rgba_getr(color),
+                                     rgba_getg(color),
+                                     rgba_getb(color),
+                                     255);
+              else
+                i = framePalette->findBestfit(rgba_getr(color),
+                                              rgba_getg(color),
+                                              rgba_getb(color),
+                                              rgba_geta(color),
+                                              m_transparentIndex);
+            }
           }
           else {
             ASSERT(m_transparentIndex >= 0);

@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2016  David Capello
 //
 // This program is distributed under the terms of
@@ -116,6 +116,8 @@ void ColorCurveFilter::applyToIndexed(FilterManager* filterMgr)
   Target target = filterMgr->getTarget();
   const Palette* pal = filterMgr->getIndexedData()->getPalette();
   const RgbMap* rgbmap = filterMgr->getIndexedData()->getRgbMap();
+  const OctreeMap* octreeMap = filterMgr->getIndexedData()->getOctreeMap();
+
   int x, c, r, g, b, a;
 
   for (x=0; x<w; x++) {
@@ -142,7 +144,12 @@ void ColorCurveFilter::applyToIndexed(FilterManager* filterMgr)
       if (target & TARGET_BLUE_CHANNEL ) b = m_cmap[b];
       if (target & TARGET_ALPHA_CHANNEL) a = m_cmap[a];
 
-      c = rgbmap->mapColor(r, g, b, a);
+      if (octreeMap)
+        c = octreeMap->mapColor(r, g, b);
+      else {
+        ASSERT(rgbmap)
+        c = rgbmap->mapColor(r, g, b, a);
+      }
     }
 
     *(dst_address++) = MID(0, c, pal->size()-1);

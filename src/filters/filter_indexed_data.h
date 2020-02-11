@@ -1,4 +1,5 @@
 // Aseprite
+// Copyright (C)      2020  Igara Studio S.A.
 // Copyright (C) 2001-2017  David Capello
 //
 // This program is distributed under the terms of
@@ -12,6 +13,7 @@ namespace doc {
   class Palette;
   class PalettePicks;
   class RgbMap;
+  class OctreeMap;
 }
 
 namespace filters {
@@ -23,6 +25,7 @@ namespace filters {
     virtual ~FilterIndexedData() { }
     virtual const doc::Palette* getPalette() const = 0;
     virtual const doc::RgbMap* getRgbMap() const = 0;
+    virtual const doc::OctreeMap* getOctreeMap() const = 0;
 
     // If a filter ask for a new palette, it means that the filter
     // will modify the palette instead of pixels.

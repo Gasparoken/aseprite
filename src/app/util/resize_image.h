@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2019-2020  Igara Studio S.A.
 //
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
@@ -18,6 +18,7 @@ namespace doc {
   class Image;
   class Palette;
   class RgbMap;
+  class OctreeMap;
 }
 
 namespace app {
@@ -28,7 +29,8 @@ namespace app {
     const gfx::SizeF& scale,
     const doc::algorithm::ResizeMethod method,
     const doc::Palette* pal,
-    const doc::RgbMap* rgbmap);
+    const doc::RgbMap* rgbmap,
+    const doc::OctreeMap* octreeMap);
 
   void resize_cel_image(
     Tx& tx, doc::Cel* cel,

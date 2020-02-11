@@ -1,6 +1,6 @@
 // Aseprite Document Library
-// Copyright (c) 2019  Igara Studio S.A.
-// Copyright (c) 2001-2018 David Capello
+// Copyright (c) 2019-2020  Igara Studio S.A.
+// Copyright (c) 2001-2018  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -13,6 +13,7 @@
 
 #include "doc/algorithm/rotsprite.h"
 #include "doc/image_impl.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/primitives_fast.h"
 #include "doc/rgbmap.h"
@@ -47,6 +48,7 @@ void resize_image(const Image* src,
                   const ResizeMethod method,
                   const Palette* pal,
                   const RgbMap* rgbmap,
+                  const OctreeMap* octreeMap,
                   const color_t maskColor)
 {
   switch (method) {
@@ -79,7 +81,7 @@ void resize_image(const Image* src,
         resize_image(
           src, dst,
           RESIZE_METHOD_NEAREST_NEIGHBOR,
-          pal, rgbmap, maskColor);
+          pal, rgbmap, octreeMap, maskColor);
         return;
       }
 
@@ -159,7 +161,15 @@ void resize_image(const Image* src,
                           (rgba_getb(color[2])*u2 + rgba_getb(color[3])*u1)*v1);
               int a = int((rgba_geta(color[0])*u2 + rgba_geta(color[1])*u1)*v2 +
                           (rgba_geta(color[2])*u2 + rgba_geta(color[3])*u1)*v1);
-              dst_color = rgbmap->mapColor(r, g, b, a);
+
+              if (a == maskColor)
+                dst_color = maskColor;
+              else if (octreeMap)
+                dst_color = octreeMap->mapColor(r, g, b);
+              else if (rgbmap)
+                dst_color = rgbmap->mapColor(r, g, b, a);
+              else
+                dst_color = pal->findBestfit(r, g, b, a, maskColor);
               break;
             }
           }

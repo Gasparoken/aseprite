@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -56,7 +56,8 @@ Cel* create_cel_copy(const Cel* srcCel,
       tmpImage.get(),
       IMAGE_RGB,
       render::Dithering(),
-      srcCel->sprite()->rgbMap(srcCel->frame()),
+      nullptr, // Ignored because the dst pixel format is IMAGE_RGB.
+      nullptr, // Ignored because the dst pixel format is IMAGE_RGB.
       srcCel->sprite()->palette(srcCel->frame()),
       srcCel->layer()->isBackground(),
       0);
@@ -67,6 +68,7 @@ Cel* create_cel_copy(const Cel* srcCel,
       IMAGE_INDEXED,
       render::Dithering(),
       dstSprite->rgbMap(dstFrame),
+      srcCel->sprite()->octreeMap(dstSprite->palette(dstFrame), dstSprite->transparentColor()),
       dstSprite->palette(dstFrame),
       srcCel->layer()->isBackground(),
       dstSprite->transparentColor());
@@ -91,7 +93,7 @@ Cel* create_cel_copy(const Cel* srcCel,
     algorithm::resize_image(
       dstCel->image(), dstCel2->image(),
       algorithm::RESIZE_METHOD_NEAREST_NEIGHBOR,
-      nullptr, nullptr, 0);
+      nullptr, nullptr, nullptr, 0);
 
     dstCel.reset(dstCel2.release());
     dstCel->setPosition(gfx::Point(srcBounds.origin()));

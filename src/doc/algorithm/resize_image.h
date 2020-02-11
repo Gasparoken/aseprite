@@ -1,6 +1,6 @@
 // Aseprite Document Library
-// Copyright (c) 2019  Igara Studio S.A.
-// Copyright (c) 2001-2018 David Capello
+// Copyright (c) 2019-2020  Igara Studio S.A.
+// Copyright (c) 2001-2018  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -16,6 +16,7 @@ namespace doc {
   class Image;
   class Palette;
   class RgbMap;
+  class OctreeMap;
 
   namespace algorithm {
 
@@ -35,6 +36,7 @@ namespace doc {
                       const ResizeMethod method,
                       const Palette* palette,
                       const RgbMap* rgbmap,
+                      const OctreeMap* octreeMap,
                       const color_t maskColor);
 
     // It does not modify the image to the human eye, but internally

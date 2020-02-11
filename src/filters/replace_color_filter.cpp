@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2016  David Capello
 //
 // This program is distributed under the terms of
@@ -13,6 +13,7 @@
 
 #include "base/base.h"
 #include "doc/image.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/rgbmap.h"
 #include "filters/filter_indexed_data.h"
@@ -150,6 +151,7 @@ void ReplaceColorFilter::applyToIndexed(FilterManager* filterMgr)
   Target target = filterMgr->getTarget();
   const Palette* pal = filterMgr->getIndexedData()->getPalette();
   const RgbMap* rgbmap = filterMgr->getIndexedData()->getRgbMap();
+  const OctreeMap* octreeMap = filterMgr->getIndexedData()->getOctreeMap();
   int from_r, from_g, from_b, from_a;
   int src_r, src_g, src_b, src_a;
   int to_r, to_g, to_b, to_a;
@@ -197,11 +199,16 @@ void ReplaceColorFilter::applyToIndexed(FilterManager* filterMgr)
           (ABS(src_g-from_g) <= m_tolerance) &&
           (ABS(src_b-from_b) <= m_tolerance) &&
           (ABS(src_a-from_a) <= m_tolerance)) {
-        *(dst_address++) = rgbmap->mapColor(
-          (target & TARGET_RED_CHANNEL   ? to_r: src_r),
-          (target & TARGET_GREEN_CHANNEL ? to_g: src_g),
-          (target & TARGET_BLUE_CHANNEL  ? to_b: src_b),
-          (target & TARGET_ALPHA_CHANNEL ? to_a: src_a));
+        color_t r = (target & TARGET_RED_CHANNEL   ? to_r: src_r);
+        color_t g = (target & TARGET_GREEN_CHANNEL ? to_g: src_g);
+        color_t b = (target & TARGET_BLUE_CHANNEL  ? to_b: src_b);
+        color_t a = (target & TARGET_ALPHA_CHANNEL ? to_a: src_a);
+        if (octreeMap)
+          *(dst_address++) = octreeMap->mapColor(r, g, b);
+        else {
+          ASSERT(rgbmap);
+          *(dst_address++) = rgbmap->mapColor(r, g, b, a);
+        }
       }
       else
         *(dst_address++) = c;

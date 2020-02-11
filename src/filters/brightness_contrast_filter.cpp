@@ -1,6 +1,6 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
-// Copyright (C) 2017  David Capello
+// Copyright (C) 2019-2020  Igara Studio S.A.
+// Copyright (C)      2017  David Capello
 //
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
@@ -12,6 +12,7 @@
 #include "filters/brightness_contrast_filter.h"
 
 #include "doc/image.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/rgbmap.h"
 #include "filters/filter_indexed_data.h"
@@ -124,6 +125,7 @@ void BrightnessContrastFilter::applyToIndexed(FilterManager* filterMgr)
   const Target target = filterMgr->getTarget();
   const Palette* pal = fid->getPalette();
   const RgbMap* rgbmap = fid->getRgbMap();
+  const OctreeMap* octreeMap = fid->getOctreeMap();
   const uint8_t* src_address = (uint8_t*)filterMgr->getSourceAddress();
   uint8_t* dst_address = (uint8_t*)filterMgr->getDestinationAddress();
   const int w = filterMgr->getWidth();
@@ -137,10 +139,21 @@ void BrightnessContrastFilter::applyToIndexed(FilterManager* filterMgr)
 
     color_t c = pal->getEntry(*(src_address++));
     applyFilterToRgb(target, c);
-    *(dst_address++) = rgbmap->mapColor(rgba_getr(c),
-                                        rgba_getg(c),
-                                        rgba_getb(c),
-                                        rgba_geta(c));
+    if (octreeMap)
+      *(dst_address++) = octreeMap->mapColor(rgba_getr(c),
+                                             rgba_getg(c),
+                                             rgba_getb(c));
+    else if (rgbmap)
+      *(dst_address++) = rgbmap->mapColor(rgba_getr(c),
+                                          rgba_getg(c),
+                                          rgba_getb(c),
+                                          rgba_geta(c));
+    else
+      *(dst_address++) = pal->findBestfit(rgba_getr(c),
+                                          rgba_getg(c),
+                                          rgba_getb(c),
+                                          rgba_geta(c),
+                                          0);//maskIndex);
   }
 }
 

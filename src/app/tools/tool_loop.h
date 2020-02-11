@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2017  David Capello
 //
 // This program is distributed under the terms of
@@ -29,6 +29,7 @@ namespace doc {
   class Mask;
   class Remap;
   class RgbMap;
+  class OctreeMap;
   class Slice;
   class Sprite;
 }
@@ -119,6 +120,10 @@ namespace app {
 
       // Returns the RGB map used to convert RGB values to palette index.
       virtual RgbMap* getRgbMap() = 0;
+
+      // Returns the Octree map used to convert RGB values to palette index,
+      // if it is available.
+      virtual OctreeMap* getOctreeMap() = 0;
 
       // Returns true if we should use the mask to limit the paint area.
       virtual bool useMask() = 0;

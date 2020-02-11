@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 //
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
@@ -11,6 +11,7 @@
 #include "filters/outline_filter.h"
 
 #include "doc/image.h"
+#include "doc/octree_map.h"
 #include "doc/palette.h"
 #include "doc/rgbmap.h"
 #include "filters/filter_indexed_data.h"
@@ -182,6 +183,7 @@ void OutlineFilter::applyToIndexed(FilterManager* filterMgr)
   uint8_t* dst_address = (uint8_t*)filterMgr->getDestinationAddress();
   const Palette* pal = filterMgr->getIndexedData()->getPalette();
   const RgbMap* rgbmap = filterMgr->getIndexedData()->getRgbMap();
+  const OctreeMap* octreeMap = filterMgr->getIndexedData()->getOctreeMap();
   int x = filterMgr->x();
   const int x2 = x+filterMgr->getWidth();
   const int y = filterMgr->y();
@@ -222,10 +224,15 @@ void OutlineFilter::applyToIndexed(FilterManager* filterMgr)
         g = (target & TARGET_GREEN_CHANNEL ? rgba_getg(m_color): rgba_getg(c));
         b = (target & TARGET_BLUE_CHANNEL  ? rgba_getb(m_color): rgba_getb(c));
         a = (target & TARGET_ALPHA_CHANNEL ? rgba_geta(m_color): rgba_geta(c));
-        c = rgbmap->mapColor(r, g, b, a);
+
+        if (octreeMap)
+          c = octreeMap->mapColor(r, g, b);
+        else {
+          ASSERT(rgbmap);
+          c = rgbmap->mapColor(r, g, b, a);
+        }
       }
     }
-
     *dst_address = c;
   }
 }

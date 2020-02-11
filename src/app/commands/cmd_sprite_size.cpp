@@ -1,5 +1,5 @@
 // Aseprite
-// Copyright (C) 2019  Igara Studio S.A.
+// Copyright (C) 2019-2020  Igara Studio S.A.
 // Copyright (C) 2001-2018  David Capello
 //
 // This program is distributed under the terms of
@@ -136,9 +136,10 @@ protected:
       algorithm::resize_image(
         old_bitmap.get(), new_mask->bitmap(),
         doc::algorithm::RESIZE_METHOD_NEAREST_NEIGHBOR,
-        sprite()->palette(0), // Ignored
-        sprite()->rgbMap(0),  // Ignored
-        -1);                  // Ignored
+        nullptr, // Ignored
+        nullptr, // Ignored
+        nullptr, // Ignored
+        -1);     // Ignored
 
       // Reshrink
       new_mask->intersect(new_mask->bounds());

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Aseprite -->
-<!-- Copyright (C) 2018-2019  Igara Studio S.A. -->
+<!-- Copyright (C) 2018-2020  Igara Studio S.A. -->
 <!-- Copyright (C) 2014-2018  David Capello -->
 <preferences>
 
@@ -253,6 +253,7 @@
       <option id="with_alpha" type="bool" default="true" />
       <option id="dithering_algorithm" type="std::string" />
       <option id="dithering_factor" type="int" default="100" />
+      <option id="algorithm" type="doc::MapAlgorithm" default="doc::MapAlgorithm::DEFAULT" />
     </section>
     <section id="eyedropper" text="Editor">
       <option id="channel" type="EyedropperChannel" default="EyedropperChannel::COLOR_ALPHA" />

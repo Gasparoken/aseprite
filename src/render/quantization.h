@@ -1,5 +1,5 @@
 // Aseprite Rener Library
-// Copyright (c) 2019  Igara Studio S.A.
+// Copyright (c) 2019-2020  Igara Studio S.A.
 // Copyright (c) 2001-2017  David Capello
 //
 // This file is released under the terms of the MIT license.
@@ -10,6 +10,8 @@
 #pragma once
 
 #include "doc/frame.h"
+#include "doc/map_algorithm.h"
+#include "doc/octree_map.h"
 #include "doc/pixel_format.h"
 #include "render/color_histogram.h"
 
@@ -45,7 +47,8 @@ namespace render {
     const bool withAlpha,
     doc::Palette* newPalette, // Can be NULL to create a new palette
     TaskDelegate* delegate,
-    const bool newBlend);
+    const bool newBlend,
+    MapAlgorithm mappingAlgorithm);
 
   // Changes the image pixel format. The dithering method is used only
   // when you want to convert from RGB to Indexed.
@@ -55,6 +58,7 @@ namespace render {
     doc::PixelFormat pixelFormat,
     const render::Dithering& dithering,
     const doc::RgbMap* rgbmap,
+    const OctreeMap* octreeMap,
     const doc::Palette* palette,
     bool is_background,
     doc::color_t new_mask_color,

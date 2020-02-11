@@ -75,6 +75,7 @@ protected:
   Layer* m_layer;
   frame_t m_frame;
   RgbMap* m_rgbMap;
+  OctreeMap* m_octreeMap;
   DocumentPreferences& m_docPref;
   ToolPreferences& m_toolPref;
   int m_opacity;
@@ -114,6 +115,7 @@ public:
     , m_layer(site.layer())
     , m_frame(site.frame())
     , m_rgbMap(nullptr)
+    , m_octreeMap(nullptr)
     , m_docPref(Preferences::instance().document(m_document))
     , m_toolPref(Preferences::instance().tool(m_tool))
     , m_opacity(m_toolPref.opacity())
@@ -220,6 +222,8 @@ public:
     }
     return m_rgbMap;
   }
+  OctreeMap* getOctreeMap() override { return m_sprite->octreeMap(m_sprite->palette(m_frame),
+                                                                  m_sprite->transparentColor()); }
   ToolLoop::Button getMouseButton() override { return m_button; }
   doc::color_t getFgColor() override { return m_fgColor; }
   doc::color_t getBgColor() override { return m_bgColor; }
