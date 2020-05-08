@@ -101,6 +101,9 @@ public:
         case Simple:
           setProc(get_ink_proc<BrushSimpleInkProcessing>(loop));
           break;
+        case AlphaCompositing:
+          setProc(get_ink_proc<BrushAlphaCompositingInkProcessing>(loop));
+          break;
         case LockAlpha:
           setProc(get_ink_proc<BrushLockAlphaInkProcessing>(loop));
           break;
