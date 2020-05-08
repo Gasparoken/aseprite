@@ -1,6 +1,6 @@
 // Aseprite
-// Copyright (C) 2018  Igara Studio S.A.
-// Copyright (C) 2016  David Capello
+// Copyright (C) 2018-2020  Igara Studio S.A.
+// Copyright (C)      2016  David Capello
 //
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
@@ -95,7 +95,7 @@ Ink* ActiveToolManager::activeInk() const
       }
 
       case tools::InkType::ALPHA_COMPOSITING:
-        id = tools::WellKnownInks::Paint;
+        id = tools::WellKnownInks::PaintAlphaCompositing;
         break;
       case tools::InkType::COPY_COLOR:
         id = tools::WellKnownInks::PaintCopy;
