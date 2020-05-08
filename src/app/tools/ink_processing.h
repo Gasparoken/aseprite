@@ -1268,8 +1268,11 @@ bool BrushInkProcessingBase<RgbTraits>::preProcessPixel(int x, int y, color_t* r
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
       if (m_transparentColor == c)
         c = 0;
-      else
+      else if (c >= m_palette->size())
+        c = m_transparentColor;
+      else {
         c = m_palette->getEntry(c);
+      }
       c = rgba_blender_normal(*m_dstAddress, c, m_opacity);
       break;
     }
@@ -1313,8 +1316,11 @@ bool BrushInkProcessingBase<GrayscaleTraits>::preProcessPixel(int x, int y, colo
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
       if (m_transparentColor == c)
         c = 0;
-      else
+      else if (c >= m_palette->size())
+        c = m_transparentColor;
+      else {
         c = m_palette->getEntry(c);
+      }
       c = graya(rgba_luma(c), rgba_geta(c));
       c = graya_blender_normal(*m_dstAddress, c, m_opacity);
       break;
@@ -1352,7 +1358,12 @@ bool BrushInkProcessingBase<IndexedTraits>::preProcessPixel(int x, int y, color_
     }
     case IMAGE_INDEXED: {
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
-      if (*m_srcAddress == m_transparentColor)
+      // We need to prevent from crash. This is possible if:
+      // -  brush palette != current palette, and
+      // -  'c' is greater than current palette size.
+      if (c >= m_palette->size())
+        *result = m_transparentColor;
+      else if (*m_srcAddress == m_transparentColor)
         *result = c;
       else {
         c = m_palette->getEntry(c);
@@ -1571,6 +1582,8 @@ void BrushEraserInkProcessing<RgbTraits>::processPixel(int x, int y) {
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
       if (m_transparentColor == c)
         c = 0;
+      else if (c >= m_palette->size())
+        c = m_transparentColor;
       else
         // TODO m_palette->getEntry(c) does not work because the
         // m_palette member is loaded the Rgba Palette, NOT the
@@ -1626,6 +1639,8 @@ void BrushEraserInkProcessing<GrayscaleTraits>::processPixel(int x, int y) {
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
       if (m_transparentColor == c)
         c = 0;
+      else if (c >= m_palette->size())
+        c = m_transparentColor;
       else
         // TODO m_palette->getEntry(c) does not work because the
         // m_palette member is loaded the Graya Palette, NOT the
@@ -1863,11 +1878,12 @@ void BrushCopyInkProcessing<RgbTraits>::processPixel(int x, int y) {
       // This conversion can be possible if we load the palette pointer in m_brush when
       // is created the custom brush in the Indexed Sprite.
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
-      if (c == m_transparentColor) {
-        *m_dstAddress = *m_srcAddress;
-        return;
-      }
-      c = m_palette->getEntry(c);
+      if (c == m_transparentColor)
+        c = *m_srcAddress;
+      else if (c >= m_palette->size())
+        c = m_transparentColor;
+      else
+        c = m_palette->getEntry(c);
       break;
     }
     case IMAGE_GRAYSCALE: {
@@ -1912,6 +1928,8 @@ void BrushCopyInkProcessing<IndexedTraits>::processPixel(int x, int y) {
       // So, we need a palette index conversion
       // (paletteFromImageBrush --> paletteFromCurrentSprite)
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y); // This works when paletteFromBrushImage == paletteFromCurrentSprite
+      if (c >= m_palette->size())
+        c = m_transparentColor;
       break;
     }
     case IMAGE_GRAYSCALE: {
@@ -1955,8 +1973,9 @@ void BrushCopyInkProcessing<GrayscaleTraits>::processPixel(int x, int y) {
       // pointer in m_brush when is created the custom brush in the
       // Indexed Sprite.
       c = get_pixel_fast<IndexedTraits>(m_brushImage, x, y);
-      // c = m_paletteFromBrushImage->getEntry(c)
-      c = m_palette->getEntry(c);
+      if (c >= m_palette->size())
+        c = m_transparentColor;
+      c = m_palette->getEntry(c); // TODO: This line will be replaced: c = m_paletteFromBrushImage->getEntry(c)
       c = graya(rgba_luma(c), rgba_geta(c));
       break;
     }
