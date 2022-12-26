@@ -74,6 +74,7 @@ add_library(doc-lib
   tileset.cpp
   tileset_io.cpp
   tilesets.cpp
+  user_data.cpp
   user_data_io.cpp
   util.cpp)
 

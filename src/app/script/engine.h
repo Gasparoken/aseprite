@@ -20,6 +20,7 @@
 #include "doc/frame.h"
 #include "doc/object_ids.h"
 #include "doc/pixel_format.h"
+#include "doc/user_data.h"
 #include "gfx/fwd.h"
 
 #include <cstdio>
@@ -45,6 +46,7 @@ namespace doc {
   class LayerGroup;
   class Mask;
   class Palette;
+  class PropertyMap;
   class Sprite;
   class Tag;
   class Tileset;
@@ -150,6 +152,7 @@ namespace app {
   void push_layers(lua_State* L, const doc::ObjectIds& layers);
   void push_palette(lua_State* L, doc::Palette* palette);
   void push_plugin(lua_State* L, Extension* ext);
+  void push_properties(lua_State* L, doc::PropertyMap* ext);
   void push_sprite_cel(lua_State* L, doc::Cel* cel);
   void push_sprite_events(lua_State* L, doc::Sprite* sprite);
   void push_sprite_frame(lua_State* L, doc::Sprite* sprite, doc::frame_t frame);

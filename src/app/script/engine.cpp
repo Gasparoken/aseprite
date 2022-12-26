@@ -18,6 +18,7 @@
 #include "app/pref/preferences.h"
 #include "app/script/luacpp.h"
 #include "app/script/security.h"
+#include "app/script/userdata.h"
 #include "app/sprite_sheet_type.h"
 #include "app/tilemap_mode.h"
 #include "app/tileset_mode.h"
@@ -175,6 +176,7 @@ void register_palette_class(lua_State* L);
 void register_palettes_class(lua_State* L);
 void register_plugin_class(lua_State* L);
 void register_point_class(lua_State* L);
+void register_properties_class(lua_State* L);
 void register_range_class(lua_State* L);
 void register_rect_class(lua_State* L);
 void register_selection_class(lua_State* L);
@@ -430,6 +432,7 @@ Engine::Engine()
   register_palettes_class(L);
   register_plugin_class(L);
   register_point_class(L);
+  register_properties_class(L);
   register_range_class(L);
   register_rect_class(L);
   register_selection_class(L);

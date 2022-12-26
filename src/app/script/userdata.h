@@ -5,8 +5,8 @@
 // This program is distributed under the terms of
 // the End-User License Agreement for Aseprite.
 
-#ifndef APP_SCRIPT_USERDATA_HELPER_H_INCLUDED
-#define APP_SCRIPT_USERDATA_HELPER_H_INCLUDED
+#ifndef APP_SCRIPT_USERDATA_H_INCLUDED
+#define APP_SCRIPT_USERDATA_H_INCLUDED
 #pragma once
 
 #include "app/cmd/set_user_data.h"
@@ -15,7 +15,12 @@
 #include "app/script/luacpp.h"
 #include "app/tx.h"
 #include "doc/cel.h"
+#include "doc/tileset.h"
+#include "doc/layer.h"
+#include "doc/object_id.h"
 #include "doc/with_user_data.h"
+#include "app/script/docobj.h"
+#include "app/script/engine.h"
 
 namespace app {
 namespace script {
@@ -28,6 +33,17 @@ inline doc::WithUserData* get_WithUserData(T* obj) {
 template<>
 inline doc::WithUserData* get_WithUserData<doc::Cel>(doc::Cel* obj) {
   return obj->data();
+}
+
+template<typename T>
+int UserData_get_properties(lua_State* L) {
+  auto obj = get_docobj<T>(L, 1);
+  UserData props = get_WithUserData<T>(obj)->userData();
+//  if (props)
+//    push_properties(L, props);
+//  else
+//    lua_pushnil(L);
+  return 1;
 }
 
 template<typename T>

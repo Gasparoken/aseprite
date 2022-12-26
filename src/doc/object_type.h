@@ -35,6 +35,8 @@ namespace doc {
     LayerTilemap = 14,
     Tileset = 15,
     Tilesets = 16,
+    Tiles = 17,
+    PropertyMap = 18
   };
 
 } // namespace doc

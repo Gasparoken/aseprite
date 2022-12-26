@@ -190,6 +190,7 @@ if(ENABLE_SCRIPTING)
     script/pixel_color_object.cpp
     script/plugin_class.cpp
     script/point_class.cpp
+    script/properties_class.cpp
     script/preferences_object.cpp
     script/range_class.cpp
     script/rectangle_class.cpp
@@ -206,6 +207,7 @@ if(ENABLE_SCRIPTING)
     script/tileset_class.cpp
     script/tilesets_class.cpp
     script/tool_class.cpp
+    script/userdata.cpp
     script/values.cpp
     script/version_class.cpp
     shell.cpp
