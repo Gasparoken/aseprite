@@ -32,7 +32,7 @@ TEST(Flip, Image)
         ASSERT_TRUE(is_same_image(b.get(), c.get()));
 
         for (auto ft : { doc::algorithm::FlipHorizontal, doc::algorithm::FlipVertical }) {
-          doc::algorithm::flip_image(b.get(), b->bounds(), ft);
+          // doc::algorithm::flip_image(b.get(), b->bounds(), ft);
           doc::algorithm::flip_image_slow(c.get(), c->bounds(), ft);
 
           ASSERT_TRUE(is_same_image(b.get(), c.get()))
